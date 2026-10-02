@@ -1,6 +1,6 @@
-import { type RefObject, useEffect, useRef } from "react";
 import type { useShortcuts } from "@/contexts/ShortcutsContext";
 import { matchesShortcut } from "@/lib/shortcuts";
+import { type RefObject, useEffect, useRef } from "react";
 import type { useTimelineState } from "../state/useTimelineState";
 import type { VideoPlaybackRef } from "../VideoPlayback";
 
@@ -54,7 +54,7 @@ export function useEditorGlobalInteractions({
 				target instanceof HTMLTextAreaElement ||
 				target instanceof HTMLSelectElement ||
 				target?.isContentEditable;
-			const primaryModifier = isMac ? event.metaKey : event.ctrlKey;
+			const primaryModifier = event.metaKey;
 			const key = event.key.toLowerCase();
 
 			if (primaryModifier && !event.altKey && key === "z") {
@@ -65,13 +65,7 @@ export function useEditorGlobalInteractions({
 				}
 				return;
 			}
-			if (!isMac && event.ctrlKey && !event.metaKey && !event.altKey && key === "y") {
-				if (!editable) {
-					event.preventDefault();
-					handleRedo();
-				}
-				return;
-			}
+
 			if (!matchesShortcut(event, shortcuts.playPause, isMac) || editable) return;
 			consumePlaybackKey(event);
 			if (event.repeat) return;

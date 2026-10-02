@@ -1,17 +1,13 @@
 import {
 	type Dispatch,
 	type MutableRefObject,
-	type RefObject,
 	type SetStateAction,
 	useCallback,
 	useEffect,
 } from "react";
-import { shouldAutoApplyFreshRecordingZoomsForSource } from "../timeline/zoomSuggestionUtils";
 import type { CursorTelemetryPoint, ZoomRegion } from "../types";
-import type { VideoPlaybackRef } from "../VideoPlayback";
 
 interface UseFreshRecordingAutoZoomParams {
-	appPlatform: string;
 	videoPath: string | null;
 	loading: boolean;
 	isPreviewReady: boolean;
@@ -19,9 +15,7 @@ interface UseFreshRecordingAutoZoomParams {
 	cursorTelemetryCount: number;
 	normalizedCursorTelemetry: CursorTelemetryPoint[];
 	zoomRegions: ZoomRegion[];
-	setZoomRegions: Dispatch<SetStateAction<ZoomRegion[]>>;
 	setAutoSuggestZoomsTrigger: Dispatch<SetStateAction<number>>;
-	videoPlaybackRef: RefObject<VideoPlaybackRef | null>;
 	autoSuggestedVideoPathRef: MutableRefObject<string | null>;
 	pendingFreshRecordingAutoZoomPathRef: MutableRefObject<string | null>;
 	pendingFreshRecordingAutoSuggestTimeoutRef: MutableRefObject<number | null>;
@@ -29,7 +23,6 @@ interface UseFreshRecordingAutoZoomParams {
 }
 
 export function useFreshRecordingAutoZoom({
-	appPlatform,
 	videoPath,
 	loading,
 	isPreviewReady,
@@ -37,9 +30,7 @@ export function useFreshRecordingAutoZoom({
 	cursorTelemetryCount,
 	normalizedCursorTelemetry,
 	zoomRegions,
-	setZoomRegions,
 	setAutoSuggestZoomsTrigger,
-	videoPlaybackRef,
 	autoSuggestedVideoPathRef,
 	pendingFreshRecordingAutoZoomPathRef,
 	pendingFreshRecordingAutoSuggestTimeoutRef,
@@ -50,26 +41,6 @@ export function useFreshRecordingAutoZoom({
 	}, [setAutoSuggestZoomsTrigger]);
 
 	useEffect(() => {
-		if (!appPlatform) return;
-
-		if (
-			videoPath &&
-			pendingFreshRecordingAutoZoomPathRef.current === videoPath &&
-			isPreviewReady &&
-			!shouldAutoApplyFreshRecordingZoomsForSource(
-				videoPlaybackRef.current?.video?.videoWidth,
-				videoPlaybackRef.current?.video?.videoHeight,
-				appPlatform,
-			)
-		) {
-			pendingFreshRecordingAutoZoomPathRef.current = null;
-			if (pendingFreshRecordingAutoSuggestTimeoutRef.current !== null) {
-				window.clearTimeout(pendingFreshRecordingAutoSuggestTimeoutRef.current);
-				pendingFreshRecordingAutoSuggestTimeoutRef.current = null;
-			}
-			return;
-		}
-
 		if (
 			!videoPath ||
 			loading ||
@@ -112,7 +83,6 @@ export function useFreshRecordingAutoZoom({
 		}, 500);
 	}, [
 		videoPath,
-		appPlatform,
 		loading,
 		isPreviewReady,
 		duration,
@@ -124,39 +94,6 @@ export function useFreshRecordingAutoZoom({
 		pendingFreshRecordingAutoSuggestTimeoutRef,
 		pendingFreshRecordingAutoZoomPathRef,
 		setAutoSuggestZoomsTrigger,
-		videoPlaybackRef,
-	]);
-
-	useEffect(() => {
-		if (!appPlatform) return;
-
-		if (
-			!videoPath ||
-			!isPreviewReady ||
-			zoomRegions.length === 0 ||
-			autoSuggestedVideoPathRef.current !== videoPath ||
-			shouldAutoApplyFreshRecordingZoomsForSource(
-				videoPlaybackRef.current?.video?.videoWidth,
-				videoPlaybackRef.current?.video?.videoHeight,
-				appPlatform,
-			)
-		) {
-			return;
-		}
-
-		autoSuggestedVideoPathRef.current = null;
-		setZoomRegions((current) => {
-			const next = current.filter((region) => region.mode !== "auto");
-			return next.length === current.length ? current : next;
-		});
-	}, [
-		autoSuggestedVideoPathRef,
-		appPlatform,
-		isPreviewReady,
-		setZoomRegions,
-		videoPath,
-		videoPlaybackRef,
-		zoomRegions,
 	]);
 
 	return { handleAutoSuggestZoomsConsumed };

@@ -20,7 +20,7 @@ concurrency:
 jobs:
   authorize-source:
     name: Authorize source commit
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     timeout-minutes: 10
     outputs:
       source_sha: ${{ steps.authorize.outputs.source_sha }}
@@ -40,8 +40,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${GITHUB_REPOSITORY,,}" != "webadderallorg/recordly" ]]; then
-            echo "This workflow may run only in webadderallorg/Recordly."
+          if [[ "${GITHUB_REPOSITORY,,}" != "haaozhanggh/recordly_haao" ]]; then
+            echo "This workflow may run only in HaaoZhangGH/Recordly_Haao."
             exit 1
           fi
 
@@ -76,12 +76,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x64
-            arch_tag: darwin-x64
-            runner: macos-15-intel
           - arch: arm64
             arch_tag: darwin-arm64
-            runner: macos-14
+            runner: macos-15
     env:
       CI: true
     steps:
@@ -280,7 +277,7 @@ jobs:
     needs:
       - authorize-source
       - build-and-verify
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     timeout-minutes: 5
     steps:
       - name: Require both architectures to pass

@@ -116,11 +116,11 @@ const KEY_LABELS: Record<string, string> = {
 	arrowright: "→",
 };
 
-export function formatBinding(binding: ShortcutBinding, isMac: boolean): string {
+export function formatBinding(binding: ShortcutBinding, _isMac: boolean): string {
 	const parts: string[] = [];
-	if (binding.ctrl) parts.push(isMac ? "⌘" : "Ctrl");
-	if (binding.shift) parts.push(isMac ? "⇧" : "Shift");
-	if (binding.alt) parts.push(isMac ? "⌥" : "Alt");
+	if (binding.ctrl) parts.push("⌘");
+	if (binding.shift) parts.push("⇧");
+	if (binding.alt) parts.push("⌥");
 	parts.push(KEY_LABELS[binding.key] ?? binding.key.toUpperCase());
 	return parts.join(" + ");
 }

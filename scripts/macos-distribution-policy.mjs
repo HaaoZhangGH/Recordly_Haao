@@ -100,17 +100,13 @@ export function collectEntitlementErrors(entitlements) {
 	return errors;
 }
 
-export function expectedMachOArchitecture(filePath, buildArch) {
+export function expectedMachOArchitecture(filePath, _buildArch) {
 	const normalizedPath = filePath.replaceAll("\\", "/");
 	if (normalizedPath.includes("/darwin-arm64/")) {
 		return "arm64";
 	}
 
-	if (normalizedPath.includes("/darwin-x64/")) {
-		return "x86_64";
-	}
-
-	return buildArch === "arm64" ? "arm64" : "x86_64";
+	return "arm64";
 }
 
 export function parseLipoArchitectures(output) {

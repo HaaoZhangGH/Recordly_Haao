@@ -1,14 +1,14 @@
-import { isHudInEditorMode } from "./hudEditorMode";
+import { app, BrowserWindow, ipcMain } from "electron";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, ipcMain } from "electron";
 import {
-	supportsHudCaptureProtection,
 	shouldProtectHudCapture,
+	supportsHudCaptureProtection,
 } from "../src/lib/hudCaptureProtection";
 import { USER_DATA_PATH } from "./appPaths";
+import { isHudInEditorMode } from "./hudEditorMode";
 import {
 	getHudOverlayWindowBounds,
 	resizeHudOverlayFallbackBounds,
@@ -23,13 +23,6 @@ const nodeRequire = createRequire(import.meta.url);
 const APP_ROOT = path.join(electronWindowsDir, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const RENDERER_DIST = path.join(APP_ROOT, "dist");
-const WINDOW_ICON_FILENAME =
-	process.platform === "darwin" ? "recordlymac-512.png" : "recordly-512.png";
-const WINDOW_ICON_PATH = path.join(
-	process.env.VITE_PUBLIC || RENDERER_DIST,
-	"app-icons",
-	WINDOW_ICON_FILENAME,
-);
 
 let hudOverlayWindow: BrowserWindow | null = null;
 let hudOverlayHiddenFromCapture = true;
@@ -121,7 +114,7 @@ function getEditorWindowQuery(): Record<string, string> {
 }
 
 export function isHudOverlayMousePassthroughSupported(): boolean {
-	return process.platform !== "linux";
+	return true;
 }
 
 function loadHudOverlayCaptureProtectionSetting(): boolean {
@@ -153,7 +146,7 @@ export function getHudOverlayCaptureProtectionEnabled(): boolean {
 }
 
 function applyHudOverlayCaptureProtectionToWindow(hud: BrowserWindow, enabled: boolean): void {
-	if (!supportsHudCaptureProtection(process.platform)) {
+	if (!supportsHudCaptureProtection("darwin")) {
 		return;
 	}
 
@@ -329,7 +322,7 @@ function setHudOverlayMousePassthrough(ignore: boolean) {
 	}
 
 	if (!isHudOverlayMousePassthroughSupported()) {
-		if (process.platform !== "linux") {
+		{
 			setHudOverlayFallbackExpanded(!ignore);
 		}
 		hudOverlayWindow.setIgnoreMouseEvents(false);
@@ -374,9 +367,6 @@ ipcMain.on("hud-overlay-drag", (_event, phase: string, screenX: number, screenY:
 	// -webkit-app-region: drag on Linux, letting the OS move the window for us.
 	// The resulting position is captured by the win.on("moved", ...) listener
 	// below so `hudUserPosition` stays in sync.
-	if (process.platform === "linux") {
-		return;
-	}
 
 	if (phase === "start") {
 		const bounds = hudOverlayWindow.getBounds();
@@ -503,7 +493,7 @@ export function createHudOverlayWindow(): BrowserWindow {
 		alwaysOnTop: true,
 		// The HUD is Recordly's persistent top-level window, so it owns the
 		// Windows taskbar entry while auxiliary overlays stay hidden there.
-		...getHudOverlayTaskbarOptions(process.platform),
+		...getHudOverlayTaskbarOptions("darwin"),
 		hasShadow: false,
 		show: false,
 		webPreferences: {
@@ -517,7 +507,7 @@ export function createHudOverlayWindow(): BrowserWindow {
 	// Keep the recording controls and webcam above normal and full-screen apps.
 	// Transparent regions remain click-through via setIgnoreMouseEvents().
 	win.setAlwaysOnTop(true, "screen-saver");
-	if (process.platform === "darwin") {
+	{
 		win.setVisibleOnAllWorkspaces(true, {
 			visibleOnFullScreen: true,
 			skipTransformProcessType: true,
@@ -540,23 +530,11 @@ export function createHudOverlayWindow(): BrowserWindow {
 		// Showing or changing native window state can recreate platform window
 		// flags. Reassert capture protection on both sides of the transition.
 		applyHudOverlayCaptureProtectionToWindow(win, hudOverlayHiddenFromCapture);
-		if (process.platform === "win32") {
-			// A focusable window is required for a Windows taskbar entry, but the
-			// always-on-top HUD must not steal focus when Recordly starts.
-			win.showInactive();
-		} else {
+		{
 			win.show();
 		}
 		win.moveTop();
 		applyHudOverlayCaptureProtectionToWindow(win, hudOverlayHiddenFromCapture);
-		if (process.platform === "win32" && isHudOverlayMousePassthroughSupported()) {
-			win.setIgnoreMouseEvents(false);
-			setTimeout(() => {
-				if (!win.isDestroyed()) {
-					setHudOverlayMousePassthrough(hudOverlayIgnoringMouse);
-				}
-			}, 50);
-		}
 	};
 
 	applyHudOverlayCaptureProtectionToWindow(win, hudOverlayHiddenFromCapture);
@@ -581,18 +559,6 @@ export function createHudOverlayWindow(): BrowserWindow {
 	// it permanently click-through without hover detection.  Re-initialise the
 	// pass-through-with-forwarding state whenever the window gains focus by toggling
 	// the flag off then back on so the native WS_EX_TRANSPARENT flag is fully reset.
-	if (process.platform === "win32" && isHudOverlayMousePassthroughSupported()) {
-		win.on("focus", () => {
-			if (!win.isDestroyed()) {
-				win.setIgnoreMouseEvents(false);
-				setTimeout(() => {
-					if (!win.isDestroyed()) {
-						setHudOverlayMousePassthrough(hudOverlayIgnoringMouse);
-					}
-				}, 50);
-			}
-		});
-	}
 
 	win.webContents.on("did-finish-load", () => {
 		console.log(`[PERF:MAIN] HUD Window: did-finish-load in ${Date.now() - perfStart}ms`);
@@ -626,13 +592,6 @@ export function createHudOverlayWindow(): BrowserWindow {
 
 	// On Linux the HUD is dragged by the OS via -webkit-app-region (Wayland
 	// forbids client-side positioning). Mirror moved bounds into drag state.
-	if (process.platform === "linux") {
-		win.on("moved", () => {
-			if (win.isDestroyed()) return;
-			const { x, y } = win.getBounds();
-			hudUserPosition = { x, y };
-		});
-	}
 
 	// Reset the user's saved HUD position when displays change so the bar
 	// doesn't end up stranded off-screen after a monitor is disconnected.
@@ -697,27 +656,9 @@ export function getHudOverlayWindow(): BrowserWindow | null {
  * user to move their mouse over the bar.
  */
 export function reassertHudOverlayMousePassthrough(): void {
-	if (process.platform !== "win32" || !isHudOverlayMousePassthroughSupported()) {
+	{
 		return;
 	}
-
-	const hud = getHudOverlayWindow();
-	if (!hud) {
-		return;
-	}
-
-	// Toggle off then back on so the native WS_EX_TRANSPARENT flag is fully
-	// re-initialised rather than merely re-asserted in a potentially broken state.
-	hud.setIgnoreMouseEvents(false);
-	if (hudOverlayMouseReassertTimer) {
-		clearTimeout(hudOverlayMouseReassertTimer);
-	}
-	hudOverlayMouseReassertTimer = setTimeout(() => {
-		hudOverlayMouseReassertTimer = null;
-		if (!hud.isDestroyed()) {
-			setHudOverlayMousePassthrough(hudOverlayIgnoringMouse);
-		}
-	}, 50);
 }
 
 export function setHudOverlayRecordingActive(recording: boolean): void {
@@ -758,7 +699,7 @@ export function createUpdateToastWindow(): BrowserWindow {
 		},
 	});
 
-	if (process.platform === "darwin") {
+	{
 		win.setAlwaysOnTop(true, "status");
 	}
 
@@ -766,7 +707,7 @@ export function createUpdateToastWindow(): BrowserWindow {
 		visibleOnFullScreen: true,
 		// Keep Recordly a foreground application so macOS does not temporarily
 		// remove its Dock icon while showing an overlay window.
-		skipTransformProcessType: process.platform === "darwin",
+		skipTransformProcessType: "darwin" === "darwin",
 	});
 	updateToastWindow = win;
 
@@ -803,9 +744,7 @@ export function showUpdateToastWindow(): BrowserWindow {
 	}
 	positionUpdateToastWindow();
 	if (!win.isVisible()) {
-		if (process.platform === "win32") {
-			win.show();
-		} else {
+		{
 			win.showInactive();
 		}
 	}
@@ -825,9 +764,7 @@ function restoreHudAfterUpdateToast(): void {
 		return;
 	}
 
-	if (process.platform === "win32") {
-		hud.showInactive();
-	} else {
+	{
 		hud.show();
 	}
 	hud.moveTop();
@@ -942,27 +879,20 @@ function loadPackagedEditorWindow(win: BrowserWindow) {
 export function createEditorWindow(): BrowserWindow {
 	const perfStart = Date.now();
 	console.log("[PERF:MAIN] createEditorWindow: STARTED");
-	const isMac = process.platform === "darwin";
-	const { workArea, workAreaSize } = getScreen().getPrimaryDisplay();
-	const initialWidth = isMac ? Math.round(workAreaSize.width * 0.85) : workArea.width;
-	const initialHeight = isMac ? Math.round(workAreaSize.height * 0.85) : workArea.height;
+	const isMac = "darwin" === "darwin";
+	const { workAreaSize } = getScreen().getPrimaryDisplay();
+	const initialWidth = Math.round(workAreaSize.width * 0.85);
+	const initialHeight = Math.round(workAreaSize.height * 0.85);
 
 	const win = new BrowserWindow({
 		width: initialWidth,
 		height: initialHeight,
-		...(!isMac && {
-			x: workArea.x,
-			y: workArea.y,
-		}),
 		minWidth: 800,
 		minHeight: 600,
-		...(process.platform !== "darwin" && {
-			icon: WINDOW_ICON_PATH,
-		}),
-		...(isMac && {
+		...{
 			titleBarStyle: "hiddenInset",
 			trafficLightPosition: { x: 16, y: 20 },
-		}),
+		},
 		autoHideMenuBar: !isMac,
 		transparent: false,
 		resizable: true,
@@ -991,7 +921,7 @@ export function createEditorWindow(): BrowserWindow {
 	const publishWindowChrome = () => {
 		if (!win.isDestroyed())
 			win.webContents.send("window-chrome-changed", {
-				trafficLightsVisible: isMac && !win.isFullScreen() && !win.isSimpleFullScreen(),
+				trafficLightsVisible: !win.isFullScreen() && !win.isSimpleFullScreen(),
 			});
 	};
 	win.on("enter-full-screen", publishWindowChrome);
@@ -1067,9 +997,6 @@ export function createSourceSelectorWindow(): BrowserWindow {
 		alwaysOnTop: true,
 		transparent: true,
 		show: false,
-		...(process.platform !== "darwin" && {
-			icon: WINDOW_ICON_PATH,
-		}),
 		backgroundColor: "#00000000",
 		webPreferences: {
 			preload: path.join(electronWindowsDir, "preload.mjs"),
@@ -1131,15 +1058,12 @@ export function createCountdownWindow(): BrowserWindow {
 		visibleOnFullScreen: true,
 		// Keep Recordly a foreground application so macOS does not temporarily
 		// remove its Dock icon while showing the countdown.
-		skipTransformProcessType: process.platform === "darwin",
+		skipTransformProcessType: "darwin" === "darwin",
 	});
 
 	win.webContents.on("did-finish-load", () => {
 		if (!win.isDestroyed()) {
-			if (process.platform === "win32") {
-				win.showInactive();
-				win.moveTop();
-			} else {
+			{
 				win.show();
 			}
 		}

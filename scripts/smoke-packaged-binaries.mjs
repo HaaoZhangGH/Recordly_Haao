@@ -25,7 +25,7 @@ function assertFile(filePath, label, { executable = false } = {}) {
 		fail(`${label} is not a file at ${relativePath(filePath)}`);
 	}
 
-	if (executable && process.platform !== "win32") {
+	if (executable) {
 		try {
 			accessSync(filePath, constants.X_OK);
 		} catch {
@@ -87,7 +87,7 @@ function findFirstExistingFile(candidates) {
 function assertPackagedAppExecutable(unpackedRoot) {
 	const resourcesDir = path.dirname(unpackedRoot);
 
-	if (process.platform === "darwin") {
+	{
 		const appBundleDir = findAppBundleDir(resourcesDir);
 		if (!appBundleDir) {
 			fail(`macOS app bundle not found for ${relativePath(unpackedRoot)}`);
@@ -104,41 +104,9 @@ function assertPackagedAppExecutable(unpackedRoot) {
 		);
 		return;
 	}
-
-	const appDir = path.dirname(resourcesDir);
-	const executableCandidates =
-		process.platform === "win32"
-			? [
-					path.join(appDir, `${productName}.exe`),
-					path.join(appDir, `${packageName}.exe`),
-					path.join(appDir, "Recordly.exe"),
-				]
-			: [
-					path.join(appDir, packageName),
-					path.join(appDir, productName),
-					path.join(appDir, productName.toLowerCase()),
-				];
-
-	const executablePath = findFirstExistingFile(executableCandidates);
-	assertFile(executablePath ?? executableCandidates[0], "packaged app executable", {
-		executable: true,
-	});
 }
-
-function getNativeArchTag(platform = process.platform, arch = process.arch) {
-	if (platform === "darwin") {
-		return arch === "arm64" ? "darwin-arm64" : "darwin-x64";
-	}
-
-	if (platform === "win32") {
-		return arch === "arm64" ? "win32-arm64" : "win32-x64";
-	}
-
-	if (platform === "linux") {
-		return arch === "arm64" ? "linux-arm64" : "linux-x64";
-	}
-
-	return `${platform}-${arch}`;
+function getNativeArchTag() {
+	return "darwin-arm64";
 }
 
 function getRequiredArchTags() {
@@ -156,66 +124,22 @@ function getRequiredArchTags() {
 		),
 	];
 }
-
 function getExpectedNativeHelperFiles(archTag) {
-	if (archTag.startsWith("win32-")) {
-		const helpers = [
-			{ name: "wgc-capture.exe", label: "Windows capture helper", executable: true },
-			{
-				name: "cursor-monitor.exe",
-				label: "Windows cursor monitor helper",
-				executable: true,
-			},
-			{
-				name: "recordly-gpu-export.exe",
-				label: "Windows GPU export helper",
-				executable: true,
-			},
-			{ name: "helpers-manifest.json", label: "Windows helper manifest" },
-			{ name: "whisper-cli.exe", label: "Whisper CLI runtime", executable: true },
-			{ name: "whisper-runtime.json", label: "Whisper runtime manifest" },
-		];
-		if (archTag === "win32-x64") {
-			helpers.push({
-				name: "recordly-nvidia-cuda-compositor.exe",
-				label: "NVIDIA CUDA compositor helper",
-				executable: true,
-			});
-		}
-		return helpers;
+	if (archTag !== "darwin-arm64") {
+		fail(`Unsupported architecture: ${archTag}`);
 	}
-
-	if (archTag.startsWith("darwin-")) {
-		return [
-			{
-				name: "recordly-screencapturekit-helper",
-				label: "ScreenCaptureKit helper",
-				executable: true,
-			},
-			{ name: "recordly-window-list", label: "Window list helper", executable: true },
-			{ name: "recordly-system-cursors", label: "System cursor helper", executable: true },
-			{
-				name: "recordly-native-cursor-monitor",
-				label: "Native cursor monitor helper",
-				executable: true,
-			},
-			{ name: "whisper-cli", label: "Whisper CLI runtime", executable: true },
-			{ name: "whisper-runtime.json", label: "Whisper runtime manifest" },
-		];
-	}
-
-	if (archTag.startsWith("linux-")) {
-		return [
-			{ name: "whisper-cli", label: "Whisper CLI runtime", executable: true },
-			{ name: "whisper-runtime.json", label: "Whisper runtime manifest" },
-		];
-	}
-
-	return [];
+	return [
+		"recordly-screencapturekit-helper",
+		"recordly-window-list",
+		"recordly-system-cursors",
+		"recordly-native-cursor-monitor",
+		"whisper-cli",
+		"whisper-runtime.json",
+	].map((name) => ({ name, label: name, executable: !name.endsWith(".json") }));
 }
 
 function verifyFfmpeg(unpackedRoot) {
-	const binaryName = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+	const binaryName = "ffmpeg";
 	const ffmpegPath = path.join(unpackedRoot, "node_modules", "ffmpeg-static", binaryName);
 
 	assertFile(ffmpegPath, "packaged FFmpeg binary", { executable: true });
@@ -245,6 +169,21 @@ function verifyNativeHelpers(unpackedRoot) {
 			fail(`native helper arch directory is missing at ${relativePath(archDir)}`);
 		}
 
+		const pickerBundle = path.join(archDir, "Recordly Picker.app");
+		assertFile(
+			path.join(pickerBundle, "Contents", "MacOS", "RecordlyPicker"),
+			"native picker app",
+			{ executable: true },
+		);
+		assertFile(path.join(pickerBundle, "Contents", "Info.plist"), "native picker identity");
+		const pickerIdentifier = execFileSync(
+			"/usr/libexec/PlistBuddy",
+			["-c", "Print :CFBundleIdentifier", path.join(pickerBundle, "Contents", "Info.plist")],
+			{ encoding: "utf8" },
+		).trim();
+		if (pickerIdentifier !== "dev.recordly.source-picker")
+			fail("native picker bundle identity is invalid");
+
 		const expectedFiles = getExpectedNativeHelperFiles(archTag);
 		if (expectedFiles.length === 0) {
 			fail(`no packaged helper expectations are defined for ${archTag}`);
@@ -269,7 +208,7 @@ if (unpackedRoots.length === 0) {
 }
 
 console.log(
-	`[packaged-smoke] verifying ${unpackedRoots.length} packaged app root(s) for ${process.platform}/${process.arch}`,
+	`[packaged-smoke] verifying ${unpackedRoots.length} packaged app root(s) for ${"darwin"}/${"arm64"}`,
 );
 
 for (const unpackedRoot of unpackedRoots) {

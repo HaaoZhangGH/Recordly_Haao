@@ -3,7 +3,6 @@ import type { CursorTelemetryPoint, ZoomFocus } from "../types";
 export const MIN_DWELL_DURATION_MS = 450;
 export const MAX_DWELL_DURATION_MS = 2600;
 export const DWELL_MOVE_THRESHOLD = 0.02;
-export const MIN_FRESH_RECORDING_AUTO_ZOOM_SOURCE_ASPECT_RATIO = 1.2;
 
 export interface ZoomDwellCandidate {
 	centerTimeMs: number;
@@ -38,33 +37,6 @@ export type InteractionZoomSuggestionStatus =
 export interface InteractionZoomSuggestionResult {
 	status: InteractionZoomSuggestionStatus;
 	suggestions: SuggestedZoomRegion[];
-}
-
-export function shouldAutoApplyFreshRecordingZoomsForSource(
-	sourceWidth?: number,
-	sourceHeight?: number,
-	platform?: string,
-): boolean {
-	// Window capture on Windows legitimately produces portrait and near-square
-	// sources. Click telemetry is already normalized to that captured window, so
-	// its aspect ratio is not a reason to suppress interaction-based zooms.
-	if (platform === "win32") {
-		return true;
-	}
-
-	if (
-		!Number.isFinite(sourceWidth) ||
-		!Number.isFinite(sourceHeight) ||
-		(sourceWidth ?? 0) <= 0 ||
-		(sourceHeight ?? 0) <= 0
-	) {
-		return true;
-	}
-
-	return (
-		(sourceWidth as number) / (sourceHeight as number) >=
-		MIN_FRESH_RECORDING_AUTO_ZOOM_SOURCE_ASPECT_RATIO
-	);
 }
 
 /** Max gap between consecutive clicks before they are split into separate zoom clusters. */

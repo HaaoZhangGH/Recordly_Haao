@@ -7,13 +7,7 @@ export interface AnnouncementMedia {
 	posterUrl?: string;
 }
 
-export type AnnouncementEditorSection =
-	| "scene"
-	| "cursor"
-	| "webcam"
-	| "captions"
-	| "settings"
-	| "extensions";
+export type AnnouncementEditorSection = "scene" | "cursor" | "webcam" | "captions" | "settings";
 
 export type AnnouncementAction =
 	| { label: string; url: string; section?: never }
@@ -169,8 +163,7 @@ export function isAnnouncementEditorSection(value: unknown): value is Announceme
 		value === "cursor" ||
 		value === "webcam" ||
 		value === "captions" ||
-		value === "settings" ||
-		value === "extensions"
+		value === "settings"
 	);
 }
 

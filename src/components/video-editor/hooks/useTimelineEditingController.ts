@@ -156,7 +156,6 @@ export function useTimelineEditingController(input: Input) {
 		],
 	);
 	const freshZoom = useFreshRecordingAutoZoom({
-		appPlatform: input.appPlatform,
 		videoPath: input.videoPath,
 		loading: input.loading,
 		isPreviewReady: input.isPreviewReady,
@@ -164,9 +163,7 @@ export function useTimelineEditingController(input: Input) {
 		cursorTelemetryCount: timeline.cursorTelemetry.length,
 		normalizedCursorTelemetry: cursor.normalizedCursorTelemetry,
 		zoomRegions: timeline.zoomRegions,
-		setZoomRegions: timeline.setZoomRegions,
 		setAutoSuggestZoomsTrigger: input.setAutoSuggestZoomsTrigger,
-		videoPlaybackRef: input.videoPlaybackRef,
 		autoSuggestedVideoPathRef: input.autoSuggestedVideoPathRef,
 		pendingFreshRecordingAutoZoomPathRef: input.pendingFreshRecordingAutoZoomPathRef,
 		pendingFreshRecordingAutoSuggestTimeoutRef:

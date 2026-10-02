@@ -1,8 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { MessageBoxOptions, MessageBoxReturnValue } from "electron";
 import { app, BrowserWindow, dialog } from "electron";
 import { autoUpdater } from "electron-updater";
+import fs from "node:fs";
+import path from "node:path";
 import { USER_DATA_PATH } from "./appPaths";
 import { readAppSetting, writeAppSetting } from "./appSettingsStore";
 import { EXPERIMENTAL_UPDATE_DESCRIPTION, getUpdateChannelConfiguration } from "./updateChannel";
@@ -175,10 +175,6 @@ function showMessageBox(
 	getMainWindow: () => BrowserWindow | null,
 	options: MessageBoxOptions,
 ): Promise<MessageBoxReturnValue> {
-	if (process.platform !== "darwin") {
-		return dialog.showMessageBox(options);
-	}
-
 	const window = getDialogWindow(getMainWindow);
 	return window ? dialog.showMessageBox(window, options) : dialog.showMessageBox(options);
 }

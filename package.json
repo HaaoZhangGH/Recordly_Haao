@@ -1,15 +1,15 @@
 {
 	"name": "recordly",
 	"productName": "Recordly",
-	"description": "A free, creator-focused screen recorder with auto-zoom, cursor effects, backgrounds, annotations, and more - built for polished videos out of the box.",
+	"description": "Apple Silicon Mac screen recorder and editor with auto-zoom, cursor effects, backgrounds, annotations, and local captions.",
 	"author": "webadderall",
-	"homepage": "https://github.com/webadderallorg/Recordly",
+	"homepage": "https://github.com/HaaoZhangGH/Recordly_Haao",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/webadderallorg/Recordly.git"
+		"url": "https://github.com/HaaoZhangGH/Recordly_Haao.git"
 	},
 	"bugs": {
-		"url": "https://github.com/webadderallorg/Recordly/issues"
+		"url": "https://github.com/HaaoZhangGH/Recordly_Haao/issues"
 	},
 	"private": true,
 	"version": "1.4.0",
@@ -17,23 +17,16 @@
 	"scripts": {
 		"dev": "vite --config vite.config.ts",
 		"postinstall": "node scripts/postinstall.mjs",
-		"build": "npm run build:platform-native-helpers && tsc && vite build --config vite.config.ts && npm run normalize:electron-main-cjs && npm run smoke:electron-main-cjs && electron-builder",
+		"build": "npm run build:mac",
 		"lint": "biome lint .",
 		"lint:fix": "biome lint --write .",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
 		"preview": "vite preview --config vite.config.ts",
-		"rebuild:native": "node ./node_modules/@electron/rebuild/lib/cli.js --force --only uiohook-napi",
 		"build:native-helpers": "node scripts/build-native-helpers.mjs",
 		"build:whisper-runtime": "node scripts/build-whisper-runtime.mjs",
-		"build:platform-native-helpers": "npm run build:whisper-runtime && npm run build:native-helpers && npm run build:windows-capture && npm run build:windows-gpu-export && npm run build:nvidia-cuda-compositor && npm run build:cursor-monitor",
-		"build:windows-gpu-export": "node scripts/build-windows-gpu-export.mjs",
-		"build:nvidia-cuda-compositor": "node scripts/build-nvidia-cuda-compositor.mjs",
-		"build:windows-capture": "node scripts/build-windows-capture.mjs",
-		"build:cursor-monitor": "node scripts/build-cursor-monitor.mjs",
-		"build:mac": "npm run build:platform-native-helpers && tsc && vite build --config vite.config.ts && npm run normalize:electron-main-cjs && npm run smoke:electron-main-cjs && electron-builder --mac",
-		"build:win": "npm run build:platform-native-helpers && tsc && vite build --config vite.config.ts && npm run normalize:electron-main-cjs && npm run smoke:electron-main-cjs && electron-builder --win",
-		"build:linux": "npm run build:platform-native-helpers && tsc && vite build --config vite.config.ts && npm run normalize:electron-main-cjs && npm run smoke:electron-main-cjs && electron-builder --linux",
+		"build:platform-native-helpers": "npm run build:whisper-runtime && npm run build:native-helpers",
+		"build:mac": "npm run build:mac:prepare && electron-builder --mac --arm64 --publish never",
 		"i18n:check": "node scripts/i18n-check.mjs",
 		"benchmark:export-queues": "node scripts/benchmark-export-queues.mjs",
 		"normalize:electron-main-cjs": "node scripts/normalize-electron-main-cjs.mjs",
@@ -46,22 +39,21 @@
 		"test:watch": "vitest",
 		"typecheck": "tsc --noEmit",
 		"test:ui": "playwright test",
-		"dev:ui": "vite --mode ui --host 127.0.0.1"
+		"dev:ui": "vite --mode ui --host 127.0.0.1",
+		"build:mac:prepare": "npm run build:platform-native-helpers && tsc && vite build --config vite.config.ts && npm run normalize:electron-main-cjs && npm run smoke:electron-main-cjs",
+		"build:mac:local": "node scripts/build-local-mac.mjs"
 	},
 	"dependencies": {
 		"@phosphor-icons/react": "^2.1.10",
 		"@solar-icons/react": "^2.3.0",
 		"@supabase/supabase-js": "^2.116.0",
-		"capturekit": "^1.0.13",
 		"electron-updater": "^6.8.3",
 		"ffmpeg-static": "^5.3.0",
-		"ffprobe-static": "^3.1.0",
-		"uiohook-napi": "^1.5.4"
+		"ffprobe-static": "^3.1.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.13",
 		"@dnd-kit/core": "^6.3.1",
-		"@electron/rebuild": "^4.2.0",
 		"@fix-webm-duration/fix": "^1.0.1",
 		"@heroui/react": "^3.2.6",
 		"@heroui/styles": "^3.2.6",

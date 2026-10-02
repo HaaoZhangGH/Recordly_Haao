@@ -1,3 +1,8 @@
+if (process.platform !== "darwin" || process.arch !== "arm64") {
+	throw new Error(
+		"This fork supports Apple Silicon Macs only. Use an arm64 Node.js installation.",
+	);
+}
 import { spawnSync } from "node:child_process";
 
 const npmExecPath = process.env.npm_execpath;
@@ -9,9 +14,9 @@ const npmInvoker = hasNpmExecPath
 			shell: false,
 		}
 	: {
-			command: process.platform === "win32" ? "npm.cmd" : "npm",
+			command: "npm",
 			argsPrefix: [],
-			shell: process.platform === "win32",
+			shell: false,
 		};
 
 function runScript(scriptName) {
@@ -38,10 +43,6 @@ function runScript(scriptName) {
 	}
 
 	return true;
-}
-
-if (!runScript("rebuild:native")) {
-	process.exit(1);
 }
 
 if (!runScript("build:platform-native-helpers")) {

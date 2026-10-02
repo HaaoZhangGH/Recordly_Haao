@@ -1,6 +1,7 @@
+import { normalizeRecordedMicrophone } from "./microphoneLevel";
+import { BrowserWindow } from "electron";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import fs from "node:fs/promises";
-import { BrowserWindow } from "electron";
 import {
 	persistPendingCursorTelemetry,
 	snapshotCursorTelemetryForPersistence,
@@ -183,6 +184,7 @@ export async function muxNativeMacRecordingWithAudio(
 			if (stat.size > 0 && microphonePath !== finalMicPath) {
 				await moveFileWithOverwrite(microphonePath, finalMicPath);
 			}
+			if (stat.size > 0) await normalizeRecordedMicrophone(finalMicPath);
 		} catch (err) {
 			console.error(`[mac-mux] Failed to handle mic audio:`, err);
 		}
@@ -234,10 +236,7 @@ export async function finalizeStoredVideo(videoPath: string) {
 	try {
 		validation = await validateRecordedVideo(videoPath);
 	} catch (error) {
-		if (
-			lastNativeCaptureDiagnostics?.backend === "mac-screencapturekit" ||
-			lastNativeCaptureDiagnostics?.backend === "windows-wgc"
-		) {
+		if (lastNativeCaptureDiagnostics?.backend === "mac-screencapturekit") {
 			recordNativeCaptureDiagnostics({
 				backend: lastNativeCaptureDiagnostics.backend,
 				phase: lastNativeCaptureDiagnostics.phase === "mux" ? "mux" : "stop",
@@ -270,10 +269,7 @@ export async function finalizeStoredVideo(videoPath: string) {
 		console.warn("[mac-stop] Failed to persist cursor telemetry:", error);
 	}
 
-	if (
-		lastNativeCaptureDiagnostics?.backend === "mac-screencapturekit" ||
-		lastNativeCaptureDiagnostics?.backend === "windows-wgc"
-	) {
+	if (lastNativeCaptureDiagnostics?.backend === "mac-screencapturekit") {
 		recordNativeCaptureDiagnostics({
 			backend: lastNativeCaptureDiagnostics.backend,
 			phase: lastNativeCaptureDiagnostics.phase === "mux" ? "mux" : "stop",

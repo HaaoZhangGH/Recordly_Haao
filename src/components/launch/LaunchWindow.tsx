@@ -1,8 +1,8 @@
 import {
 	ArrowClockwiseIcon,
 	CaretUpIcon,
-	House,
 	DotsThreeVerticalIcon,
+	House,
 	MicrophoneIcon,
 	MicrophoneSlashIcon,
 	MinusIcon,
@@ -12,9 +12,9 @@ import {
 	VideoCameraSlashIcon,
 	XIcon,
 } from "@/components/ui/icons";
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef } from "react";
 import { Separator } from "@/components/ui/separator";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { useScopedT } from "../../contexts/I18nContext";
 import { useMicrophoneDevices } from "../../hooks/useMicrophoneDevices";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
@@ -50,13 +50,14 @@ export function LaunchWindow() {
 
 function LaunchWindowContent() {
 	const t = useScopedT("launch");
-	const { openId, requestOpen } = useLaunchPopoverCoordinator();
+	const { openId, requestOpen, requestClose } = useLaunchPopoverCoordinator();
 
 	const {
 		recording,
 		paused,
 		finalizing,
 		countdownActive,
+		starting,
 		toggleRecording,
 		pauseRecording,
 		resumeRecording,
@@ -74,14 +75,55 @@ function LaunchWindowContent() {
 		countdownDelay,
 		setCountdownDelay,
 		preparePermissions,
+		permissionIssue,
 	} = useScreenRecorder();
 
 	const { elapsed, formatTime } = useRecordingTimer(recording, paused);
 	const hudContentRef = useRef<HTMLDivElement>(null);
 	const hudBarRef = useRef<HTMLDivElement>(null);
 
-	const { selectedSource, hasSelectedSource, handleSourceSelect, syncSelectedSource } =
-		useLaunchWindowActions();
+	const { selectedSource, handleSourceSelect, syncSelectedSource } = useLaunchWindowActions();
+
+	const [pickingSource, setPickingSource] = useState(false);
+	const [pickerError, setPickerError] = useState<string | null>(null);
+	const pickerInFlight = useRef(false);
+	const pickAndRecord = async (mode?: "screen" | "window") => {
+		if (pickerInFlight.current || starting || recording || finalizing || countdownActive)
+			return;
+		pickerInFlight.current = true;
+		setPickingSource(true);
+		setPickerError(null);
+		requestClose("sources");
+		try {
+			if (!(await preparePermissions())) {
+				requestOpen("sources");
+				return;
+			}
+			const captureMode =
+				mode ??
+				(localStorage.getItem("recordly.captureMode") === "screen" ? "screen" : "window");
+			const result = await window.electronAPI.pickNativeSource(captureMode);
+			if (!result.success) {
+				if (!result.cancelled) throw new Error(result.error || "System picker failed");
+				return;
+			}
+			localStorage.setItem("recordly.captureMode", captureMode);
+			syncSelectedSource(result.source);
+			// Main process has already stored the source before this promise resolves.
+			toggleRecording();
+		} catch (error) {
+			console.error("Failed to select recording target:", error);
+			setPickerError(String(error));
+			requestOpen("sources");
+		} finally {
+			pickerInFlight.current = false;
+			setPickingSource(false);
+		}
+	};
+
+	useEffect(() => {
+		if (permissionIssue) requestOpen("sources");
+	}, [permissionIssue, requestOpen]);
 
 	const showWebcamControls = webcamEnabled && !recording;
 	const { devices, selectedDeviceId, setSelectedDeviceId } = useMicrophoneDevices(
@@ -94,8 +136,7 @@ function LaunchWindowContent() {
 		setSelectedDeviceId: setSelectedVideoDeviceId,
 	} = useVideoDevices(webcamEnabled || openId === "webcam");
 
-	const { hudOverlayMousePassthroughSupported, platform } =
-		useLaunchWindowSystemState(preparePermissions);
+	const { hudOverlayMousePassthroughSupported } = useLaunchWindowSystemState();
 
 	useEffect(() => {
 		if (!selectedDeviceId) {
@@ -219,18 +260,26 @@ function LaunchWindowContent() {
 
 	const idleControls = (
 		<>
-			{platform !== "linux" && (
+			{
 				<>
 					<SourcePopover
 						selectedSource={selectedSource}
-						onSourceSelect={handleSourceSelect}
+						onSourceSelect={async (source) => {
+							if (starting || pickingSource || countdownActive) return;
+							await handleSourceSelect(source);
+							toggleRecording();
+						}}
+						onPickMode={pickAndRecord}
+						error={pickerError}
+						permissionIssue={permissionIssue}
 						onOpen={beginInteractiveHudAction}
 						trigger={
 							<Button
 								variant="ghost"
 								size="lg"
 								className={` ${styles.electronNoDrag} group gap-2 px-3 min-w-0 max-w-[180px] shrink-0  ${openId === "sources" ? "border-[var(--launch-border-strong)] bg-[var(--launch-hover)]" : ""} `}
-								title={selectedSource}
+								title={t("recording.pickerHint")}
+								disabled={pickingSource || starting || countdownActive}
 							>
 								<MonitorIcon
 									weight={openId === "sources" ? "fill" : "regular"}
@@ -238,7 +287,7 @@ function LaunchWindowContent() {
 									className="size-5 shrink-0"
 								/>
 								<div className="flex-1 min-w-0 overflow-hidden">
-									<MarqueeText text={selectedSource} />
+									<MarqueeText text={t("recording.chooseTarget")} />
 								</div>
 								<CaretUpIcon
 									size={10}
@@ -252,7 +301,7 @@ function LaunchWindowContent() {
 
 					<Separator orientation="vertical" className="mx-[5px] h-6 self-center" />
 				</>
-			)}
+			}
 
 			<MicPopover
 				disabled={recording}
@@ -361,15 +410,11 @@ function LaunchWindowContent() {
 				variant="destructive"
 				size="icon"
 				className={styles.electronNoDrag}
-				onClick={
-					hasSelectedSource || platform === "linux"
-						? toggleRecording
-						: () => {
-								beginInteractiveHudAction();
-								requestOpen("sources");
-							}
-				}
-				disabled={countdownActive}
+				onClick={() => {
+					beginInteractiveHudAction();
+					void pickAndRecord();
+				}}
+				disabled={countdownActive || pickingSource || starting}
 				title={t("recording.record")}
 			>
 				<div className={styles.recDot} />
@@ -412,8 +457,7 @@ function LaunchWindowContent() {
 	);
 
 	const hudMode = finalizing ? "finalizing" : recording ? "recording" : "idle";
-	const useNativeHudBarDrag =
-		platform === "linux" || hudOverlayMousePassthroughSupported === false;
+	const useNativeHudBarDrag = hudOverlayMousePassthroughSupported === false;
 	const shouldAnimateHudLayout = !recording && !showRecordingWebcamPreview && !isHudDragging;
 
 	return (

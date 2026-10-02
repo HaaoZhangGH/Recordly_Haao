@@ -1,14 +1,14 @@
-import type { RefObject } from "react";
-import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
 import type { SupportedMp4Dimensions } from "@/lib/exporter";
+import type { RefObject } from "react";
+import { useCallback } from "react";
 import type { useVideoEditorAudio } from "../audio/useVideoEditorAudio";
 import type { getSmokeExportConfig } from "../smokeExportConfig";
 import type { useAppearanceState } from "../state/useAppearanceState";
 import type { useTimelineState } from "../state/useTimelineState";
 import type { CursorTelemetryPoint, SpeedRegion, ZoomRegion } from "../types";
-import type { VideoPlaybackRef } from "../VideoPlayback";
 import { summarizeErrorMessage } from "../videoEditorUtils";
+import type { VideoPlaybackRef } from "../VideoPlayback";
 import type { PendingExportSave } from "./exportPersistence";
 import type { useExportSession } from "./useExportSession";
 import type { useExportSettings } from "./useExportSettings";
@@ -32,8 +32,6 @@ export type ExportRunnerInput = {
 		options?: { capTo1080p?: boolean },
 	) => Promise<SupportedMp4Dimensions>;
 	captionSidecarPayload?: PendingExportSave["captionSidecar"];
-	experimentalNvidiaCudaExport: boolean;
-	nvidiaCudaExportAvailable: boolean;
 	remountPreview: () => void;
 };
 

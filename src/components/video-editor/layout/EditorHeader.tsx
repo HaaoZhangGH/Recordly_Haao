@@ -1,14 +1,14 @@
 import { FeedbackDialog } from "@/components/feedback/FeedbackDialog";
-import { Separator } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import {
-	House,
 	FilmStrip,
+	House,
 	ArrowClockwise as Redo2,
 	ArrowCounterClockwise as Undo2,
 } from "@/components/ui/icons";
-import type { CSSProperties, FormEvent, RefObject } from "react";
-import { Button } from "@/components/ui/button";
 import type { useI18n } from "@/contexts/I18nContext";
+import { Separator } from "@heroui/react";
+import type { CSSProperties, FormEvent, RefObject } from "react";
 import type { useExportDimensions } from "../export/useExportDimensions";
 import type { useExportSession } from "../export/useExportSession";
 import type { useExportSettings } from "../export/useExportSettings";
@@ -44,9 +44,6 @@ type Props = {
 	exportDimensions: ReturnType<typeof useExportDimensions>;
 	exportStatus: ReturnType<typeof useExportStatusViewModel>;
 	hasCaptionsForSidecar: boolean;
-	nvidiaCudaExportAvailable: boolean;
-	experimentalNvidiaCudaExport: boolean;
-	setExperimentalNvidiaCudaExport: (enabled: boolean) => void;
 	handleOpenExportDropdown: () => void;
 	handleExportDropdownClose: () => void;
 	handleCancelExport: () => void;
@@ -82,9 +79,6 @@ export function EditorHeader(props: Props) {
 		exportDimensions,
 		exportStatus,
 		hasCaptionsForSidecar,
-		nvidiaCudaExportAvailable,
-		experimentalNvidiaCudaExport,
-		setExperimentalNvidiaCudaExport,
 		handleOpenExportDropdown,
 		handleExportDropdownClose,
 		handleCancelExport,
@@ -236,9 +230,6 @@ export function EditorHeader(props: Props) {
 					exportDimensions={exportDimensions}
 					exportStatus={exportStatus}
 					hasCaptionsForSidecar={hasCaptionsForSidecar}
-					nvidiaCudaExportAvailable={nvidiaCudaExportAvailable}
-					experimentalNvidiaCudaExport={experimentalNvidiaCudaExport}
-					setExperimentalNvidiaCudaExport={setExperimentalNvidiaCudaExport}
 					handleOpenExportDropdown={handleOpenExportDropdown}
 					handleExportDropdownClose={handleExportDropdownClose}
 					handleCancelExport={handleCancelExport}

@@ -54,7 +54,17 @@
 			"upToDateTitle": "Recordly {{version}} 已是最新版本。",
 			"availableTitle": "Recordly {{version}} 已推出新版本。",
 			"availableGenericTitle": "有可用更新。"
-		}
+		},
+		"pickWindow": "錄製視窗…",
+		"pickScreen": "錄製整個螢幕…",
+		"pickerHint": "選中視窗或螢幕後確認，即依倒數設定開始錄製。",
+		"pickerFailed": "系統選擇器暫時無法使用，請重試或從下方清單選擇。",
+		"chooseFromList": "從清單選擇…",
+		"chooseTarget": "視窗 / 螢幕",
+		"permission_screen": "尚未取得螢幕錄製權限。請在系統設定中允許 Recordly，再次點擊錄製。",
+		"permission_accessibility": "尚未取得游標追蹤所需的輔助使用權限。若開關已開啟，請移除舊記錄，再從「應用程式」加入 Recordly，然後重試錄製。",
+		"permission_unavailable": "暫時無法讀取權限狀態，請重試。",
+		"openPermissionSettings": "開啟權限設定"
 	},
 	"sourceSelector": {
 		"loadingSources": "正在載入來源...",

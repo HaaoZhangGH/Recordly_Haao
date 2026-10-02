@@ -18,34 +18,25 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
 release/**
 *.kiro/
-# npx electron-builder --mac --win
+# Apple Silicon macOS builds
 .tmp/
 .history/
-extension-sources/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
 
 # Native capture build artifacts
-electron/native/wgc-capture/build/
-electron/native/cursor-monitor/build/
-electron/native/gpu-export-probe/build/
-electron/native/nvidia-cuda-compositor/build/
 electron/native/bin/*/whisper-*
 electron/native/bin/*/whisper-runtime.json
 
 # Local debug helpers
-tmp-*.ps1
-.tmp-*.ps1
-gpu-export-probe.mp4
 
 # Browser test output
 test-results/
 playwright-report/
+
+# Generated native system-picker application bundle
+electron/native/bin/*/Recordly Picker.app/

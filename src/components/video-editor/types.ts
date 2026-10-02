@@ -116,10 +116,8 @@ export type EditorEffectSection =
 	| "zoom"
 	| "frame"
 	| "crop"
-	| "extensions"
 	| "clip"
-	| "audio"
-	| `ext:${string}`;
+	| "audio";
 
 export type ZoomTransitionEasing = "recordly" | "glide" | "smooth" | "snappy" | "linear";
 

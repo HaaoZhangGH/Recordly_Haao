@@ -10,8 +10,6 @@ const baseOptions = {
 	settings: {},
 	exportPipelineModel: "modern" as const,
 	exportBackendPreference: "breeze" as const,
-	experimentalNvidiaCudaExport: false,
-	nvidiaCudaExportAvailable: false,
 };
 
 describe("resolveMp4ExportRouting", () => {
@@ -19,7 +17,6 @@ describe("resolveMp4ExportRouting", () => {
 		expect(resolveMp4ExportRouting(baseOptions)).toEqual({
 			pipelineModel: "modern",
 			useExperimentalNativeExport: true,
-			useExperimentalNvidiaCudaExport: false,
 			backendPreference: "auto",
 		});
 	});
@@ -33,7 +30,6 @@ describe("resolveMp4ExportRouting", () => {
 		).toEqual({
 			pipelineModel: "legacy",
 			useExperimentalNativeExport: false,
-			useExperimentalNvidiaCudaExport: false,
 			backendPreference: "webcodecs",
 		});
 	});
@@ -50,7 +46,6 @@ describe("resolveMp4ExportRouting", () => {
 		).toEqual({
 			pipelineModel: "modern",
 			useExperimentalNativeExport: false,
-			useExperimentalNvidiaCudaExport: false,
 			backendPreference: "webcodecs",
 		});
 
@@ -65,35 +60,7 @@ describe("resolveMp4ExportRouting", () => {
 		).toEqual({
 			pipelineModel: "modern",
 			useExperimentalNativeExport: true,
-			useExperimentalNvidiaCudaExport: false,
 			backendPreference: "breeze",
 		});
-	});
-
-	it("only enables NVIDIA CUDA when native export is active and the device is available", () => {
-		expect(
-			resolveMp4ExportRouting({
-				...baseOptions,
-				experimentalNvidiaCudaExport: true,
-				nvidiaCudaExportAvailable: true,
-			}).useExperimentalNvidiaCudaExport,
-		).toBe(true);
-
-		expect(
-			resolveMp4ExportRouting({
-				...baseOptions,
-				settings: { pipelineModel: "legacy" },
-				experimentalNvidiaCudaExport: true,
-				nvidiaCudaExportAvailable: true,
-			}).useExperimentalNvidiaCudaExport,
-		).toBe(false);
-
-		expect(
-			resolveMp4ExportRouting({
-				...baseOptions,
-				experimentalNvidiaCudaExport: true,
-				nvidiaCudaExportAvailable: false,
-			}).useExperimentalNvidiaCudaExport,
-		).toBe(false);
 	});
 });

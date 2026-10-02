@@ -73,7 +73,7 @@ export default defineConfig(({ mode }) => ({
 										fileName: (_format, entryName) => `${entryName}.cjs`,
 									},
 									rollupOptions: {
-										external: ["ffmpeg-static", "uiohook-napi"],
+										external: ["ffmpeg-static"],
 										output: {
 											format: "cjs",
 											inlineDynamicImports: true,

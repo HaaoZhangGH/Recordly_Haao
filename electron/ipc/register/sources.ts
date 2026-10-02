@@ -1,25 +1,23 @@
-import { createRecordingEditorNavigation } from "../../recordingEditorNavigation";
+import { pickNativeSource } from "../nativeSourcePicker";
+import { app, BrowserWindow, desktopCapturer, ipcMain, systemPreferences } from "electron";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { app, BrowserWindow, desktopCapturer, ipcMain, systemPreferences } from "electron";
+import { createRecordingEditorNavigation } from "../../recordingEditorNavigation";
 import {
-	setHudRecordingPreparationActive,
 	createHudOverlayWindow,
 	getHudOverlayWindow,
 	reassertHudOverlayMousePassthrough,
+	setHudRecordingPreparationActive,
 } from "../../windows";
 import { ALLOW_RECORDLY_WINDOW_CAPTURE } from "../constants";
 import {
 	getNativeMacWindowSources,
-	resolveLinuxWindowBounds,
 	resolveMacWindowBounds,
 	stopWindowBoundsCapture,
 } from "../cursor/bounds";
-import { getDisplayBoundsForSource, getDisplayWorkAreaForSource } from "../recording/ffmpeg";
 import { selectedSource, setSelectedSource } from "../state";
 import type { SelectedSource, WindowBounds } from "../types";
 import { getScreen, parseWindowId } from "../utils";
-import { bringWindowsWindowForward, resolveWindowsWindowBounds } from "../windowsWindowControl";
 import { getScreenSourceIdForDisplay } from "./sourceMapping";
 
 const execFileAsync = promisify(execFile);
@@ -49,14 +47,14 @@ export async function bringSelectedWindowForward(
 	if (!windowId) return null;
 
 	try {
-		if (process.platform === "darwin") {
+		{
 			const rawAppName = source.appName || source.name?.split(" — ")[0]?.trim();
 			const appName =
 				rawAppName && /^[\w .&()+'-]{1,64}$/.test(rawAppName) ? rawAppName : null;
 			if (!appName) return null;
 			await execFileAsync("open", ["-a", appName], { timeout: 2000 });
 			try {
-				systemPreferences?.isTrustedAccessibilityClient?.(true);
+				if (!systemPreferences.isTrustedAccessibilityClient(false)) return null;
 				const { stdout } = await execFileAsync(
 					"osascript",
 					[
@@ -102,12 +100,6 @@ export async function bringSelectedWindowForward(
 			} catch {
 				// App activation still works without macOS Accessibility permission.
 			}
-		} else if (process.platform === "win32") {
-			await bringWindowsWindowForward(windowId);
-		} else if (process.platform === "linux") {
-			await execFileAsync("wmctrl", ["-i", "-a", `0x${windowId.toString(16)}`], {
-				timeout: 1500,
-			});
 		}
 		await new Promise((resolve) => setTimeout(resolve, 250));
 	} catch {
@@ -213,7 +205,7 @@ export function registerSourceHandlers({
 					displayId,
 					env: process.env,
 					matchedSourceId: matchedSource?.id,
-					platform: process.platform,
+					platform: "darwin",
 				}),
 				name: displayName,
 				originalName: matchedSource?.name ?? displayName,
@@ -224,7 +216,7 @@ export function registerSourceHandlers({
 			};
 		});
 
-		if (process.platform !== "darwin" || !includeWindows) {
+		if (!includeWindows) {
 			const windowSources = electronSources
 				.filter((source) => source.id.startsWith("window:"))
 				.filter((source) => {
@@ -388,6 +380,19 @@ export function registerSourceHandlers({
 		}
 	});
 
+	ipcMain.handle("pick-native-source", async (event, mode: unknown) => {
+		if (mode !== "window" && mode !== "screen") {
+			return { success: false, error: "Invalid capture mode" };
+		}
+		const result = await pickNativeSource(mode, event.sender);
+		if (result.success && !event.sender.isDestroyed()) {
+			setSelectedSource(result.source);
+			broadcastSelectedSourceChange();
+			stopWindowBoundsCapture();
+		}
+		return result;
+	});
+
 	ipcMain.handle("select-source", async (_, source: SelectedSource) => {
 		if (source.id?.startsWith("window:")) {
 			await bringSelectedWindowForward(source);
@@ -411,17 +416,10 @@ export function registerSourceHandlers({
 			let bounds: { x: number; y: number; width: number; height: number } | null = null;
 
 			if (source.id?.startsWith("screen:")) {
-				bounds =
-					process.platform === "darwin"
-						? getDisplayWorkAreaForSource(source)
-						: getDisplayBoundsForSource(source);
+				bounds = getDisplayWorkAreaForSource(source);
 			} else if (isWindow) {
-				if (process.platform === "darwin") {
+				{
 					bounds = await resolveMacWindowBounds(source);
-				} else if (process.platform === "win32") {
-					bounds = await resolveWindowsWindowBounds(source);
-				} else if (process.platform === "linux") {
-					bounds = await resolveLinuxWindowBounds(source);
 				}
 			}
 
@@ -431,7 +429,7 @@ export function registerSourceHandlers({
 			if (isWindow && (!bounds || bounds.width <= 0 || bounds.height <= 0)) {
 				console.warn("Unable to resolve selected window bounds for highlight", {
 					sourceId: source.id,
-					platform: process.platform,
+					platform: "darwin",
 				});
 				return { success: false };
 			}
@@ -455,7 +453,7 @@ export function registerSourceHandlers({
 			// macOS clamps window positions below the menu bar so outward
 			// padding only works on the left/top while right/bottom run off-screen.
 			const isScreen = source.id?.startsWith("screen:");
-			const isMacScreen = isScreen && process.platform === "darwin";
+			const isMacScreen = isScreen;
 			const pad = isMacScreen ? 0 : 6;
 			const highlightWin = new BrowserWindow({
 				x: Math.round(resolvedBounds.x - pad),
@@ -470,13 +468,13 @@ export function registerSourceHandlers({
 				resizable: false,
 				focusable: false,
 				show: false,
-				...(process.platform === "darwin" ? { type: "panel" as const } : {}),
+				...{ type: "panel" as const },
 				webPreferences: { nodeIntegration: false, contextIsolation: true },
 			});
 
 			highlightWin.setIgnoreMouseEvents(true);
 			highlightWin.setAlwaysOnTop(true, "screen-saver");
-			if (process.platform === "darwin") {
+			{
 				highlightWin.setVisibleOnAllWorkspaces(true, {
 					visibleOnFullScreen: true,
 					skipTransformProcessType: true,
@@ -620,4 +618,19 @@ body{background:transparent;overflow:hidden;width:100vw;height:100vh}
 		}
 		recordingNavigation.open();
 	});
+}
+
+function getSourceDisplay(source: SelectedSource) {
+	const screen = getScreen();
+	const displayId = source.display_id || source.id?.split(":")[1];
+	return (
+		screen.getAllDisplays().find((display) => String(display.id) === displayId) ??
+		screen.getPrimaryDisplay()
+	);
+}
+function getDisplayBoundsForSource(source: SelectedSource) {
+	return getSourceDisplay(source).bounds;
+}
+function getDisplayWorkAreaForSource(source: SelectedSource) {
+	return getSourceDisplay(source).workArea;
 }

@@ -1,21 +1,21 @@
-import { AccountProfileContext } from "@/components/ui/account-avatar";
-import { DashboardSettingsContext } from "../dashboard/DashboardSettings";
+import { EditorAnnouncementBanner } from "@/components/announcements/EditorAnnouncementBanner";
 import { RecordlySignInDialog, type SignInReason } from "@/components/auth/RecordlySignInDialog";
 import { useRecordlyAuth } from "@/components/auth/useRecordlyAuth";
-import { useVideoSourceRecovery } from "../hooks/useVideoSourceRecovery";
-import { useRecordingLibrary } from "../library/useRecordingLibrary";
-import { RecordingLibraryPanel } from "../library/RecordingLibraryPanel";
-import { RECORDING_DRAG_TYPE } from "@/types/recordingLibrary";
+import { AccountProfileContext } from "@/components/ui/account-avatar";
 import { Button } from "@/components/ui/button";
-import { useCallback, useMemo, useEffect, useRef, useState, type ComponentProps } from "react";
-import { EditorAnnouncementBanner } from "@/components/announcements/EditorAnnouncementBanner";
 import { Toaster } from "@/components/ui/toast";
 import type { useI18n } from "@/contexts/I18nContext";
+import { RECORDING_DRAG_TYPE } from "@/types/recordingLibrary";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { DashboardSettingsContext } from "../dashboard/DashboardSettings";
 import type { useEditorExportController } from "../export/useEditorExportController";
 import type { useExportDimensions } from "../export/useExportDimensions";
 import type { useExportSession } from "../export/useExportSession";
 import type { useExportSettings } from "../export/useExportSettings";
 import type { useTimelineEditingController } from "../hooks/useTimelineEditingController";
+import { useVideoSourceRecovery } from "../hooks/useVideoSourceRecovery";
+import { RecordingLibraryPanel } from "../library/RecordingLibraryPanel";
+import { useRecordingLibrary } from "../library/useRecordingLibrary";
 import type { useVideoEditorPresets } from "../presets/useVideoEditorPresets";
 import type { useEditorProjectController } from "../project/useEditorProjectController";
 import { SettingsPanel } from "../SettingsPanel";
@@ -25,8 +25,8 @@ import type { useProjectState } from "../state/useProjectState";
 import type { useTimelineState } from "../state/useTimelineState";
 import { CropEditorDialog } from "./CropEditorDialog";
 import { EditorDialogs } from "./EditorDialogs";
-import { EditorLoadingSkeleton } from "./EditorLoadingSkeleton";
 import { EditorHeader } from "./EditorHeader";
+import { EditorLoadingSkeleton } from "./EditorLoadingSkeleton";
 import { EditorPreviewPanel } from "./EditorPreviewPanel";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorTimelinePanel } from "./EditorTimelinePanel";
@@ -47,9 +47,6 @@ type Props = {
 	settingsPanelProps: ComponentProps<typeof SettingsPanel>;
 	headerLeftControlsPaddingClass: string;
 	hasCaptionsForSidecar: boolean;
-	nvidiaCudaExportAvailable: boolean;
-	experimentalNvidiaCudaExport: boolean;
-	setExperimentalNvidiaCudaExport: (enabled: boolean) => void;
 	effectiveShowCursor: boolean;
 	previewAspectRatioValue: number;
 };
@@ -87,9 +84,6 @@ export function EditorShell(props: Props) {
 		settingsPanelProps,
 		headerLeftControlsPaddingClass,
 		hasCaptionsForSidecar,
-		nvidiaCudaExportAvailable,
-		experimentalNvidiaCudaExport,
-		setExperimentalNvidiaCudaExport,
 		effectiveShowCursor,
 		previewAspectRatioValue,
 	} = props;
@@ -261,9 +255,6 @@ export function EditorShell(props: Props) {
 				exportDimensions={exportDimensions}
 				exportStatus={exportStatus}
 				hasCaptionsForSidecar={hasCaptionsForSidecar}
-				nvidiaCudaExportAvailable={nvidiaCudaExportAvailable}
-				experimentalNvidiaCudaExport={experimentalNvidiaCudaExport}
-				setExperimentalNvidiaCudaExport={setExperimentalNvidiaCudaExport}
 				handleOpenExportDropdown={dialogActions.handleOpenExportDropdown}
 				handleExportDropdownClose={dialogActions.handleExportDropdownClose}
 				handleCancelExport={dialogActions.handleCancelExport}

@@ -21,7 +21,7 @@ export function getProjectBackupPath(projectPath: string): string {
 
 function getQueueKey(projectPath: string): string {
 	const resolvedPath = path.resolve(projectPath);
-	return process.platform === "win32" ? resolvedPath.toLowerCase() : resolvedPath;
+	return resolvedPath;
 }
 
 function createTemporaryPath(parentDir: string, label: string): string {
@@ -66,10 +66,6 @@ async function syncExistingFile(filePath: string): Promise<void> {
 }
 
 async function syncParentDirectory(parentDir: string): Promise<void> {
-	if (process.platform === "win32") {
-		return;
-	}
-
 	try {
 		const handle = await fs.open(parentDir, "r");
 		try {

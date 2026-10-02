@@ -1,12 +1,12 @@
 # Contribution Guidelines
 
+This personal fork supports Apple Silicon macOS only. Changes should preserve that scope.
+
 Thank you for considering contributing to this project! By contributing, you help make this project better for everyone. Please take a moment to review these guidelines to ensure a smooth contribution process.
 
 Areas where help is especially valuable:
 - Export optimisations
-- Native screen recording for Linux
 - Wallpaper submissions
-- Extensions (device frames, click effects, render hooks — see [EXTENSIONS.md](./EXTENSIONS.md))
 
 ## How to Contribute
 

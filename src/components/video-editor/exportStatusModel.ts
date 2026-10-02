@@ -75,19 +75,8 @@ export function resolveExportStatusModel({
 			? exportProgress.renderFps.toFixed(1)
 			: null;
 	const runtimeLabel = resolveRuntimeLabel(exportProgress);
-	const nativeSkipReasons =
-		exportProgress?.nativeStaticLayoutSkipReasons &&
-		exportProgress.nativeStaticLayoutSkipReasons.length > 0
-			? exportProgress.nativeStaticLayoutSkipReasons
-			: exportProgress?.nativeStaticLayoutSkipReason
-				? [exportProgress.nativeStaticLayoutSkipReason]
-				: [];
-	const nativeSkipLabel =
-		nativeSkipReasons.length > 0
-			? `Native skipped: ${nativeSkipReasons[0]}${
-					nativeSkipReasons.length > 1 ? ` (+${nativeSkipReasons.length - 1} more)` : ""
-				}`
-			: null;
+	const nativeSkipReasons: string[] = [];
+	const nativeSkipLabel = null;
 
 	return {
 		isExportSaving,

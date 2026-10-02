@@ -2,11 +2,6 @@ export interface HudOverlayTaskbarOptions {
 	skipTaskbar: boolean;
 	focusable: boolean;
 }
-
-export function getHudOverlayTaskbarOptions(platform: NodeJS.Platform): HudOverlayTaskbarOptions {
-	const showInWindowsTaskbar = platform === "win32";
-	return {
-		skipTaskbar: !showInWindowsTaskbar,
-		focusable: showInWindowsTaskbar,
-	};
+export function getHudOverlayTaskbarOptions(_platform?: NodeJS.Platform): HudOverlayTaskbarOptions {
+	return { skipTaskbar: true, focusable: false };
 }

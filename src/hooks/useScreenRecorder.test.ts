@@ -5,7 +5,6 @@ import {
 	createProcessedMicrophoneConstraints,
 	normalizeBrowserMicrophoneProfile,
 	resolveBrowserCaptureCursorPolicy,
-	shouldUseNativeWindowsCaptureForSource,
 	stopAndDiscardNativeCapture,
 } from "./useScreenRecorder";
 
@@ -147,30 +146,6 @@ describe("resolveBrowserCaptureCursorPolicy", () => {
 			hideOsCursorBeforeRecording: true,
 			hideEditorOverlayCursorByDefault: true,
 		});
-	});
-
-	it("uses the browser captured cursor after native Windows capture fails to start", () => {
-		expect(
-			resolveBrowserCaptureCursorPolicy({ nativeWindowsCaptureStartFailed: true }),
-		).toEqual({
-			streamCursor: "always",
-			hideOsCursorBeforeRecording: false,
-			hideEditorOverlayCursorByDefault: true,
-		});
-	});
-});
-
-describe("shouldUseNativeWindowsCaptureForSource", () => {
-	it("keeps native Windows capture on screen sources", () => {
-		expect(shouldUseNativeWindowsCaptureForSource({ id: "screen:101:0" })).toBe(true);
-	});
-
-	it("keeps native Windows capture on window sources", () => {
-		expect(shouldUseNativeWindowsCaptureForSource({ id: "window:123456:0" })).toBe(true);
-	});
-
-	it("keeps browser capture for non-desktop sources", () => {
-		expect(shouldUseNativeWindowsCaptureForSource({ id: "browser-tab:abc" })).toBe(false);
 	});
 });
 

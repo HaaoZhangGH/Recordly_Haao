@@ -1,19 +1,18 @@
 import { AccountAvatar } from "@/components/ui/account-avatar";
-import type { User } from "@supabase/supabase-js";
-import { Camera, ClosedCaptioning, Cursor, Gear, FrameCorners } from "@/components/ui/icons";
+import { Camera, ClosedCaptioning, Cursor, FrameCorners, Gear } from "@/components/ui/icons";
+import type { useI18n } from "@/contexts/I18nContext";
 import {
-	ToggleButtonGroup,
-	ToggleButton,
 	Button,
-	Tooltip,
 	Card,
-	Switch,
 	Label,
+	Switch,
+	ToggleButton,
+	ToggleButtonGroup,
+	Tooltip,
 } from "@heroui/react";
+import type { User } from "@supabase/supabase-js";
 import type { ComponentProps, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import type { useI18n } from "@/contexts/I18nContext";
-import ExtensionManager from "../ExtensionManager";
 import { SettingsPanel } from "../SettingsPanel";
 import type { EditorEffectSection } from "../types";
 
@@ -157,11 +156,7 @@ export function EditorSidebar({
 									</Switch>
 								)}
 							</header>
-							{activeSection === "extensions" ? (
-								<ExtensionManager />
-							) : (
-								<SettingsPanel {...settingsPanelProps} advanced={advanced} />
-							)}
+							<SettingsPanel {...settingsPanelProps} advanced={advanced} />
 						</>
 					)}
 				</Card>

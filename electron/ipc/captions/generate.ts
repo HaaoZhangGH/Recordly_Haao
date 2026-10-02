@@ -1,9 +1,9 @@
+import { app } from "electron";
 import { execFile, spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { app } from "electron";
 import { getFfmpegBinaryPath } from "../ffmpeg/binary";
 import { getBundledWhisperExecutableCandidates } from "../paths/binaries";
 import { resolveRecordingSession } from "../project/session";
@@ -13,10 +13,9 @@ import {
 } from "../recording/diagnostics";
 import { normalizeVideoSourcePath } from "../utils";
 import { type CaptionAudioCandidate, getCaptionCompanionAudioCandidates } from "./audioCandidates";
-import { shouldRetryWhisperWithoutJson } from "./parser";
-import { readWhisperCaptionOutput } from "./output";
-import { isMissingWindowsWhisperRuntimeDependency } from "./runtimeErrors";
 import { mergeCaptionSources } from "./mergeSources";
+import { readWhisperCaptionOutput } from "./output";
+import { shouldRetryWhisperWithoutJson } from "./parser";
 import { segmentCuesIntoPhrases } from "./segment";
 import {
 	parseSilenceIntervals,
@@ -28,21 +27,11 @@ import {
 const execFileAsync = promisify(execFile);
 
 class NoCaptionAudioError extends Error {}
-
 async function executeWhisper(whisperExecutablePath: string, args: string[]) {
-	try {
-		await execFileAsync(whisperExecutablePath, args, {
-			timeout: 30 * 60 * 1000,
-			maxBuffer: 20 * 1024 * 1024,
-		});
-	} catch (error) {
-		if (isMissingWindowsWhisperRuntimeDependency(error)) {
-			throw new Error(
-				"Whisper could not start because the Microsoft Visual C++ x64 Redistributable is missing. Install it from https://aka.ms/vc14/vc_redist.x64.exe, then restart Recordly.",
-			);
-		}
-		throw error;
-	}
+	await execFileAsync(whisperExecutablePath, args, {
+		timeout: 30 * 60 * 1000,
+		maxBuffer: 20 * 1024 * 1024,
+	});
 }
 
 export async function ensureReadableFile(filePath: string, options?: { executable?: boolean }) {
@@ -70,10 +59,10 @@ export async function resolveWhisperExecutablePath(preferredPath?: string | null
 		preferredPath?.trim() || null,
 		...getBundledWhisperExecutableCandidates(),
 		process.env["WHISPER_CPP_PATH"]?.trim() || null,
-		process.platform === "darwin" ? "/opt/homebrew/bin/whisper-cli" : null,
-		process.platform === "darwin" ? "/usr/local/bin/whisper-cli" : null,
-		process.platform === "darwin" ? "/opt/homebrew/bin/whisper-cpp" : null,
-		process.platform === "darwin" ? "/usr/local/bin/whisper-cpp" : null,
+		"/opt/homebrew/bin/whisper-cli",
+		"/usr/local/bin/whisper-cli",
+		"/opt/homebrew/bin/whisper-cpp",
+		"/usr/local/bin/whisper-cpp",
 	].filter((value): value is string => Boolean(value));
 
 	for (const candidate of candidatePaths) {
@@ -83,11 +72,8 @@ export async function resolveWhisperExecutablePath(preferredPath?: string | null
 		}
 	}
 
-	const pathCommand = process.platform === "win32" ? "where" : "which";
-	const binaryNames =
-		process.platform === "win32"
-			? ["whisper-cli.exe", "whisper.exe", "main.exe"]
-			: ["whisper-cli", "whisper-cpp", "whisper", "main"];
+	const pathCommand = "which";
+	const binaryNames = ["whisper-cli", "whisper-cpp", "whisper", "main"];
 
 	for (const binaryName of binaryNames) {
 		const result = spawnSync(pathCommand, [binaryName], { encoding: "utf-8" });
@@ -104,7 +90,7 @@ export async function resolveWhisperExecutablePath(preferredPath?: string | null
 	}
 
 	throw new Error(
-		`No Whisper runtime was found for ${process.platform}/${process.arch}. ` +
+		`No Whisper runtime was found for ${"darwin"}/${"arm64"}. ` +
 			"This Recordly build is missing its bundled caption runtime. Reinstall or update Recordly, or select a whisper-cli executable in Caption settings.",
 	);
 }

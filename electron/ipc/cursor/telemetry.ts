@@ -12,7 +12,6 @@ import {
 	cursorCapturePauseStartedAtMs,
 	cursorCaptureStartTimeMs,
 	isCursorCaptureActive,
-	linuxCursorScreenPoint,
 	pendingCursorSamples,
 	selectedSource,
 	selectedWindowBounds,
@@ -163,28 +162,12 @@ export function getCursorCaptureElapsedMs(nowMs = Date.now()) {
 			activePauseDurationMs,
 	);
 }
-
 export function getNormalizedCursorPoint() {
-	const fallbackCursor = getScreen().getCursorScreenPoint();
-	const linuxCursorCache = process.platform === "linux" ? linuxCursorScreenPoint : null;
-	const isLinuxCacheFresh = !!linuxCursorCache && Date.now() - linuxCursorCache.updatedAt <= 1000;
-
-	const primarySf =
-		process.platform !== "darwin" ? getScreen().getPrimaryDisplay().scaleFactor || 1 : 1;
-
-	const cursor = isLinuxCacheFresh
-		? { x: linuxCursorCache.x / primarySf, y: linuxCursorCache.y / primarySf }
-		: fallbackCursor;
+	const cursor = getScreen().getCursorScreenPoint();
 
 	const windowBounds = selectedSource?.id?.startsWith("window:") ? selectedWindowBounds : null;
 	if (windowBounds) {
-		const sf =
-			process.platform === "win32" || process.platform === "darwin"
-				? 1
-				: getScreen().getDisplayNearestPoint({
-						x: windowBounds.x / primarySf,
-						y: windowBounds.y / primarySf,
-					}).scaleFactor || 1;
+		const sf = 1;
 		const width = Math.max(1, windowBounds.width / sf);
 		const height = Math.max(1, windowBounds.height / sf);
 

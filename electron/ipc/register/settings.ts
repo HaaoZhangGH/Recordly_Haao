@@ -1,8 +1,7 @@
-import { createCountdownController } from "../../countdownController";
-import fs from "node:fs/promises";
 import { app, BrowserWindow, ipcMain } from "electron";
+import fs from "node:fs/promises";
 import { hasAppSetting, readAppSettingsStore, writeAppSettingsStore } from "../../appSettingsStore";
-import { hideCursor } from "../../cursorHider";
+import { createCountdownController } from "../../countdownController";
 import { createCountdownWindow } from "../../windows";
 import { COUNTDOWN_SETTINGS_FILE, RECORDINGS_SETTINGS_FILE, SHORTCUTS_FILE } from "../constants";
 import {
@@ -51,16 +50,12 @@ export function registerSettingsHandlers() {
 	ipcMain.handle("get-window-chrome", (event) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
 		return {
-			trafficLightsVisible:
-				process.platform === "darwin" &&
-				!!win &&
-				!win.isFullScreen() &&
-				!win.isSimpleFullScreen(),
+			trafficLightsVisible: !!win && !win.isFullScreen() && !win.isSimpleFullScreen(),
 		};
 	});
 
 	ipcMain.handle("get-platform", () => {
-		return process.platform;
+		return "darwin";
 	});
 
 	ipcMain.on("app-settings:get", (event, key: unknown) => {
@@ -103,11 +98,9 @@ export function registerSettingsHandlers() {
 	// The IPC promise resolves only after the cursor hide attempt completes.
 	// ---------------------------------------------------------------------------
 	ipcMain.handle("hide-cursor", () => {
-		if (process.platform !== "win32") {
+		{
 			return { success: true };
 		}
-
-		return { success: hideCursor() };
 	});
 
 	ipcMain.handle("get-shortcuts", async () => {

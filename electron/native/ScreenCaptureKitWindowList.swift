@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import CoreGraphics
 import ScreenCaptureKit
 
@@ -42,6 +43,109 @@ let excludedWindowTitles: Set<String> = [
 // shareable content. Without this, the helper can stall sporadically when run
 // as a standalone CLI process from Electron.
 let _ = CGMainDisplayID()
+
+// The picker only selects a target. Recording remains in the existing capture
+// helper, with the parent's screen-recording permission and capture settings.
+@available(macOS 15.2, *)
+final class SourcePicker: NSObject, NSApplicationDelegate, SCContentSharingPickerObserver {
+	private let mode: String
+	private var finished = false
+	private var lifetimeTimer: Timer?
+	private var resultURL: URL { URL(fileURLWithPath: CommandLine.arguments[3]) }
+
+	init(mode: String) { self.mode = mode }
+
+	func applicationDidFinishLaunching(_ notification: Notification) {
+		fputs("PICKER_LAUNCHED\n", stderr)
+		fflush(stderr)
+		let picker = SCContentSharingPicker.shared
+		var configuration = SCContentSharingPickerConfiguration()
+		configuration.allowedPickerModes = mode == "window" ? [.singleWindow] : [.singleDisplay]
+		configuration.allowsChangingSelectedContent = false
+		// Electron's windows are hidden while selecting. Exclude their IDs as well.
+		configuration.excludedWindowIDs = CommandLine.arguments.dropFirst(5).compactMap {
+			Int($0)
+		}
+		picker.defaultConfiguration = configuration
+		picker.add(self)
+		picker.maximumStreamCount = 1
+		picker.isActive = true
+		NSApp.activate(ignoringOtherApps: true)
+		picker.present(using: mode == "window" ? .window : .display)
+		lifetimeTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+			guard let self else { return }
+			let parentPID = Int32(CommandLine.arguments[4]) ?? 0
+			let directory = self.resultURL.deletingLastPathComponent().path
+			if !FileManager.default.fileExists(atPath: directory) ||
+				FileManager.default.fileExists(atPath: directory + "/cancel") ||
+				parentPID <= 0 || kill(parentPID, 0) != 0 {
+				self.finish(["cancelled": true])
+			}
+		}
+		fputs("PICKER_PRESENTED\n", stderr)
+		fflush(stderr)
+	}
+
+	private func finish(_ result: [String: Any]) {
+		guard !finished else { return }
+		finished = true
+		lifetimeTimer?.invalidate()
+		let picker = SCContentSharingPicker.shared
+		picker.isActive = false
+		picker.remove(self)
+		if let data = try? JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]) {
+			try? data.write(to: resultURL, options: .atomic)
+		}
+		fflush(stdout)
+		NSApp.terminate(nil)
+	}
+
+	func contentSharingPicker(_ picker: SCContentSharingPicker, didCancelFor stream: SCStream?) {
+		DispatchQueue.main.async { self.finish(["cancelled": true]) }
+	}
+
+	func contentSharingPickerStartDidFailWithError(_ error: Error) {
+		DispatchQueue.main.async { self.finish(["error": error.localizedDescription]) }
+	}
+
+	func contentSharingPicker(_ picker: SCContentSharingPicker, didUpdateWith filter: SCContentFilter, for stream: SCStream?) {
+		DispatchQueue.main.async {
+			if self.mode == "window", let window = filter.includedWindows.first {
+				let appName = window.owningApplication?.applicationName ?? ""
+				let title = normalize(window.title) ?? appName
+				self.finish(["source": [
+					"id": "window:\(window.windowID):0", "name": title,
+					"appName": appName, "windowTitle": title,
+					"sourceType": "window", "display_id": "",
+					"thumbnail": NSNull(), "appIcon": NSNull()
+				]])
+			} else if self.mode == "screen", let display = filter.includedDisplays.first {
+				self.finish(["source": [
+					"id": "screen:fallback:\(display.displayID)",
+					"name": "\(NSLocalizedString("Screen", comment: "Display capture target")) \(display.displayID)",
+					"sourceType": "screen", "display_id": String(display.displayID),
+					"thumbnail": NSNull(), "appIcon": NSNull()
+				]])
+			} else {
+				self.finish(["error": "The selected capture target is unavailable."])
+			}
+		}
+	}
+}
+
+if CommandLine.arguments.count >= 5, CommandLine.arguments[1] == "--pick" {
+	if #available(macOS 15.2, *) {
+		let application = NSApplication.shared
+		// The system picker requires a regular application while it is presented.
+		application.setActivationPolicy(.regular)
+		let picker = SourcePicker(mode: CommandLine.arguments[2])
+		application.delegate = picker
+		withExtendedLifetime(picker) { application.run() }
+	} else {
+		print("{\"error\":\"System target selection requires macOS 15.2 or later.\"}")
+	}
+	exit(0)
+}
 
 let group = DispatchGroup()
 group.enter()

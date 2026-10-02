@@ -1,7 +1,5 @@
-import { DownloadSimple as Download, FilmSlate as Film, Image } from "@/components/ui/icons";
-import { Card, Label, Description, TagGroup, Tag } from "@heroui/react";
-import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { DownloadSimple as Download, FilmSlate as Film, Image } from "@/components/ui/icons";
 import { Switch } from "@/components/ui/switch";
 import { useScopedT } from "@/contexts/I18nContext";
 import type {
@@ -14,6 +12,8 @@ import type {
 	GifSizePreset,
 } from "@/lib/exporter";
 import { GIF_FRAME_RATES, GIF_SIZE_PRESETS, MP4_FRAME_RATES } from "@/lib/exporter";
+import { Card, Description, Label, Tag, TagGroup } from "@heroui/react";
+import type { ReactNode } from "react";
 
 interface ExportSettingsMenuProps {
 	exportFormat: ExportFormat;
@@ -25,9 +25,6 @@ interface ExportSettingsMenuProps {
 	mp4FrameRate: ExportMp4FrameRate;
 	onMp4FrameRateChange?: (frameRate: ExportMp4FrameRate) => void;
 	exportPipelineModel?: ExportPipelineModel;
-	experimentalNvidiaCudaExport?: boolean;
-	onExperimentalNvidiaCudaExportChange?: (enabled: boolean) => void;
-	nvidiaCudaExportAvailable?: boolean;
 	showCaptionSidecarOption?: boolean;
 	includeCaptionSidecar?: boolean;
 	onIncludeCaptionSidecarChange?: (enabled: boolean) => void;
@@ -102,10 +99,6 @@ export function ExportSettingsMenu({
 	onExportEncodingModeChange,
 	mp4FrameRate,
 	onMp4FrameRateChange,
-	exportPipelineModel = "modern",
-	experimentalNvidiaCudaExport = false,
-	onExperimentalNvidiaCudaExportChange,
-	nvidiaCudaExportAvailable = false,
 	showCaptionSidecarOption = false,
 	includeCaptionSidecar = false,
 	onIncludeCaptionSidecarChange,
@@ -121,7 +114,6 @@ export function ExportSettingsMenu({
 	className,
 }: ExportSettingsMenuProps) {
 	const tSettings = useScopedT("settings");
-	const isLegacyModel = exportPipelineModel === "legacy";
 
 	return (
 		<Card className={className}>
@@ -197,14 +189,7 @@ export function ExportSettingsMenu({
 								label: String(value),
 							}))}
 						/>
-						{!isLegacyModel && nvidiaCudaExportAvailable && (
-							<Switch
-								checked={experimentalNvidiaCudaExport}
-								onCheckedChange={onExperimentalNvidiaCudaExportChange}
-							>
-								<Label>{tSettings("export.nvidiaCuda.title", "NVIDIA CUDA")}</Label>
-							</Switch>
-						)}
+						{false}
 						{showCaptionSidecarOption && (
 							<div>
 								<Switch

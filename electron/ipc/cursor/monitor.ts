@@ -1,8 +1,6 @@
-import { spawn } from "node:child_process";
-import { constants as fsConstants } from "node:fs";
-import fs from "node:fs/promises";
 import { BrowserWindow } from "electron";
-import { ensureNativeCursorMonitorBinary, getCursorMonitorExePath } from "../paths/binaries";
+import { spawn } from "node:child_process";
+import { ensureNativeCursorMonitorBinary } from "../paths/binaries";
 import {
 	currentCursorVisualType,
 	nativeCursorMonitorOutputBuffer,
@@ -87,24 +85,9 @@ export function stopNativeCursorMonitor() {
 export async function startNativeCursorMonitor() {
 	stopNativeCursorMonitor();
 
-	if (process.platform !== "darwin" && process.platform !== "win32") {
-		setCurrentCursorVisualType("arrow");
-		return;
-	}
-
 	try {
 		let helperPath: string;
-		if (process.platform === "win32") {
-			helperPath = getCursorMonitorExePath();
-			try {
-				// Use F_OK on Windows — X_OK is meaningless and can give false positives
-				await fs.access(helperPath, fsConstants.F_OK);
-			} catch {
-				console.warn("Windows cursor monitor helper missing:", helperPath);
-				setCurrentCursorVisualType("arrow");
-				return;
-			}
-		} else {
+		{
 			helperPath = await ensureNativeCursorMonitorBinary();
 		}
 

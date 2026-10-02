@@ -1,5 +1,5 @@
-import type { RefObject } from "react";
 import type { useI18n } from "@/contexts/I18nContext";
+import type { RefObject } from "react";
 import type { useVideoEditorAudio } from "../audio/useVideoEditorAudio";
 import type { getSmokeExportConfig } from "../smokeExportConfig";
 import type { useAppearanceState } from "../state/useAppearanceState";
@@ -39,8 +39,6 @@ type Input = {
 	cursorTelemetrySourcePath: string | null;
 	hasCaptionsForSidecar: boolean;
 	captionSidecarPayload?: Parameters<typeof useExportRunner>[0]["captionSidecarPayload"];
-	experimentalNvidiaCudaExport: boolean;
-	nvidiaCudaExportAvailable: boolean;
 	remountPreview: () => void;
 };
 
@@ -61,8 +59,6 @@ export function useEditorExportController(input: Input) {
 		effectiveShowCursor: input.effectiveShowCursor,
 		ensureSupportedMp4SourceDimensions: input.dimensions.ensureSupportedMp4SourceDimensions,
 		captionSidecarPayload: input.captionSidecarPayload,
-		experimentalNvidiaCudaExport: input.experimentalNvidiaCudaExport,
-		nvidiaCudaExportAvailable: input.nvidiaCudaExportAvailable,
 		remountPreview: input.remountPreview,
 	});
 	const dialogActions = useExportDialogActions({

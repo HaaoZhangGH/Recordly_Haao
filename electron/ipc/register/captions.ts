@@ -1,5 +1,5 @@
-import path from "node:path";
 import { dialog, ipcMain } from "electron";
+import path from "node:path";
 import { generateAutoCaptionsFromVideo } from "../captions/generate";
 import {
 	deleteWhisperSmallModel,
@@ -119,7 +119,7 @@ export function registerCaptionHandlers() {
 				filters: [
 					{
 						name: "Executables",
-						extensions: process.platform === "win32" ? ["exe", "cmd", "bat"] : ["*"],
+						extensions: ["*"],
 					},
 					{ name: "All Files", extensions: ["*"] },
 				],

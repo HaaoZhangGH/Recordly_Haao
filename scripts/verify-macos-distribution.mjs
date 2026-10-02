@@ -44,8 +44,8 @@ function parseArguments(argv) {
 	}
 
 	const arch = options.arch;
-	if (arch !== "x64" && arch !== "arm64") {
-		throw new Error("--arch must be x64 or arm64");
+	if (arch !== "arm64") {
+		throw new Error("--arch must be arm64");
 	}
 
 	if (!options["team-id"]) {
@@ -395,7 +395,7 @@ export function verifyMacOSDistribution(argv = process.argv.slice(2)) {
 	let mountedDmgPath = null;
 
 	try {
-		const artifactSuffix = options.arch === "arm64" ? "arm64" : "x64";
+		const artifactSuffix = "arm64";
 		const dmgPath = path.join(options.releaseDir, `${productName}-${artifactSuffix}.dmg`);
 		const zipPath = path.join(options.releaseDir, `${productName}-${artifactSuffix}.zip`);
 

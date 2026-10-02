@@ -1,10 +1,10 @@
+import type { SaveDialogOptions } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import type { ChildProcessByStdio } from "node:child_process";
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Readable, Writable } from "node:stream";
-import type { SaveDialogOptions } from "electron";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import {
 	closeExportStream,
 	isOwnedExportPath,
@@ -16,19 +16,15 @@ import {
 import {
 	enqueueNativeVideoExportFrameWrite,
 	enqueueNativeVideoExportFrameWrites,
-	exportNativeStaticLayoutVideo,
 	flushNativeVideoExportPendingWriteRequests,
 	getExportHardwareInfo,
-	getNativeExportCapabilities,
 	getNativeVideoExportMaxQueuedWriteBytes,
 	getNativeVideoExportSessionError,
 	isHardwareAcceleratedVideoEncoder,
 	isIgnorableNativeVideoExportStreamError,
 	muxExportedVideoAudioBuffer,
 	muxNativeVideoExportAudio,
-	type NativeStaticLayoutExportOptions,
 	type NativeVideoExportSession,
-	nativeStaticLayoutExportSessions,
 	nativeVideoExportSessions,
 	probeNativeVideoMetadata,
 	removeTemporaryExportFile,
@@ -178,62 +174,6 @@ async function resolveAllowedReadableFilePath(
 	}
 
 	return realPath;
-}
-
-async function sanitizeNativeStaticLayoutExportOptions(
-	options: NativeStaticLayoutExportOptions,
-): Promise<NativeStaticLayoutExportOptions> {
-	const sanitized: NativeStaticLayoutExportOptions = {
-		...options,
-		inputPath: await resolveAllowedReadableFilePath(options.inputPath, "Native input"),
-	};
-	const mutableOptions = sanitized as unknown as Record<string, unknown>;
-
-	for (const [field, label] of [
-		["backgroundImagePath", "Native background image"],
-		["webcamInputPath", "Native webcam input"],
-		["cursorAtlasPath", "Native cursor atlas"],
-	] as const) {
-		const value = mutableOptions[field];
-		if (typeof value === "string" && value.trim().length > 0) {
-			mutableOptions[field] = await resolveAllowedReadableFilePath(value, label);
-		} else if (value === "" || value === undefined) {
-			mutableOptions[field] = null;
-		} else if (value !== null) {
-			throw new Error(`${label} must be a file path`);
-		}
-	}
-
-	for (const [field, label] of [
-		["cursorTelemetryPath", "Native cursor telemetry"],
-		["cursorAtlasMetadataPath", "Native cursor atlas metadata"],
-		["zoomTelemetryPath", "Native zoom telemetry"],
-		["timelineMapPath", "Native timeline map"],
-	] as const) {
-		const value = mutableOptions[field];
-		if (typeof value === "string" && value.trim().length > 0) {
-			mutableOptions[field] = await resolveAllowedReadableFilePath(value, label, {
-				mediaOnly: false,
-			});
-		} else if (value === "" || value === undefined) {
-			mutableOptions[field] = null;
-		} else if (value !== null) {
-			throw new Error(`${label} must be a file path`);
-		}
-	}
-
-	const audioOptions = sanitized.audioOptions;
-	if (audioOptions?.audioSourcePath) {
-		sanitized.audioOptions = {
-			...audioOptions,
-			audioSourcePath: await resolveAllowedReadableFilePath(
-				audioOptions.audioSourcePath,
-				"Native audio source",
-			),
-		};
-	}
-
-	return sanitized;
 }
 
 function isTempPathSafe(tempPath: string): boolean {
@@ -414,21 +354,6 @@ export function registerExportHandlers() {
 		}
 	});
 
-	ipcMain.handle("get-native-export-capabilities", async () => {
-		try {
-			return {
-				success: true,
-				capabilities: await getNativeExportCapabilities(),
-			};
-		} catch (error) {
-			console.warn("[native-export-capabilities] Failed:", error);
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : String(error),
-			};
-		}
-	});
-
 	ipcMain.handle("get-export-hardware-info", async () => {
 		try {
 			return {
@@ -442,67 +367,6 @@ export function registerExportHandlers() {
 				error: error instanceof Error ? error.message : String(error),
 			};
 		}
-	});
-
-	ipcMain.handle(
-		"native-static-layout-export",
-		async (event, options: NativeStaticLayoutExportOptions) => {
-			try {
-				if (!options || typeof options.inputPath !== "string") {
-					throw new Error("Native static layout export requires an input path");
-				}
-				const sanitizedOptions = await sanitizeNativeStaticLayoutExportOptions(options);
-
-				const result = await exportNativeStaticLayoutVideo(
-					getFfmpegBinaryPath(),
-					sanitizedOptions,
-					(progress) => {
-						if (event.sender.isDestroyed()) {
-							return;
-						}
-
-						event.sender.send("native-static-layout-export-progress", progress);
-					},
-				);
-				registerOwnedExportPath(result.outputPath);
-				const primaryBackend = result.metrics.chunks[0]?.backend;
-				return {
-					success: true,
-					tempPath: result.outputPath,
-					encoderName:
-						primaryBackend === "nvidia-cuda-compositor"
-							? "nvidia-cuda-compositor"
-							: primaryBackend === "windows-d3d11-compositor"
-								? "windows-d3d11-compositor"
-								: result.metrics.chunkCount > 1
-									? "chunked-h264-nvenc"
-									: "static-layout-h264-nvenc",
-					metrics: result.metrics,
-				};
-			} catch (error) {
-				console.warn("[native-static-layout-export] Failed:", error);
-				return {
-					success: false,
-					error: error instanceof Error ? error.message : String(error),
-				};
-			}
-		},
-	);
-
-	ipcMain.handle("native-static-layout-export-cancel", async (_, sessionId: string) => {
-		const session = nativeStaticLayoutExportSessions.get(sessionId);
-		if (!session) {
-			return { success: true };
-		}
-
-		session.terminating = true;
-		try {
-			session.currentProcess?.kill("SIGKILL");
-		} catch {
-			// Process may already be closed.
-		}
-
-		return { success: true };
 	});
 
 	ipcMain.on(

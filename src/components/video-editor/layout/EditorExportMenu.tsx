@@ -1,30 +1,25 @@
-import { useEffect, useState } from "react";
-import { CloudArrowUp } from "@/components/ui/icons";
-import { CloudShareButton } from "../cloud/CloudShareButton";
-import { Card } from "@heroui/react";
-import { ProgressBar } from "@heroui/react";
-import { DownloadSimple as Download } from "@/components/ui/icons";
-import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
+import { CloudArrowUp, DownloadSimple as Download } from "@/components/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "@/components/ui/toast";
 import type { useI18n } from "@/contexts/I18nContext";
+import { Card, ProgressBar } from "@heroui/react";
+import { useEffect, useState } from "react";
 import { ExportSettingsMenu } from "../ExportSettingsMenu";
+import { CloudShareButton } from "../cloud/CloudShareButton";
 import type { useExportDimensions } from "../export/useExportDimensions";
 import type { useExportSession } from "../export/useExportSession";
 import type { useExportSettings } from "../export/useExportSettings";
 import type { useExportStatusViewModel } from "../export/useExportStatusViewModel";
 
 type Props = {
- projectPath?: string | null;
+	projectPath?: string | null;
 	t: ReturnType<typeof useI18n>["t"];
 	exportSettings: ReturnType<typeof useExportSettings>;
 	exportSession: ReturnType<typeof useExportSession>;
 	exportDimensions: ReturnType<typeof useExportDimensions>;
 	exportStatus: ReturnType<typeof useExportStatusViewModel>;
 	hasCaptionsForSidecar: boolean;
-	nvidiaCudaExportAvailable: boolean;
-	experimentalNvidiaCudaExport: boolean;
-	setExperimentalNvidiaCudaExport: (enabled: boolean) => void;
 	handleOpenExportDropdown: () => void;
 	handleExportDropdownClose: () => void;
 	handleCancelExport: () => void;
@@ -51,9 +46,6 @@ export function EditorExportMenu(props: Props) {
 		exportDimensions,
 		exportStatus,
 		hasCaptionsForSidecar,
-		nvidiaCudaExportAvailable,
-		experimentalNvidiaCudaExport,
-		setExperimentalNvidiaCudaExport,
 		handleOpenExportDropdown,
 		handleExportDropdownClose,
 		handleCancelExport,
@@ -316,13 +308,6 @@ export function EditorExportMenu(props: Props) {
 								mp4FrameRate={mp4FrameRate}
 								onMp4FrameRateChange={setMp4FrameRate}
 								exportPipelineModel={exportPipelineModel}
-								experimentalNvidiaCudaExport={
-									experimentalNvidiaCudaExport && nvidiaCudaExportAvailable
-								}
-								onExperimentalNvidiaCudaExportChange={
-									setExperimentalNvidiaCudaExport
-								}
-								nvidiaCudaExportAvailable={nvidiaCudaExportAvailable}
 								exportQuality={exportQuality}
 								onExportQualityChange={setExportQuality}
 								gifFrameRate={gifFrameRate}
@@ -360,7 +345,7 @@ export function EditorExportMenu(props: Props) {
 			</Popover>
 			{shareOpen && (
 				<CloudShareButton
- projectPath={props.projectPath}
+					projectPath={props.projectPath}
 					hideTrigger
 					open={shareOpen}
 					onOpenChange={setShareOpen}

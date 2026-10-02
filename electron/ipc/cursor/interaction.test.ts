@@ -1,92 +1,71 @@
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
-vi.mock("electron", () => ({
-	app: {
-		getPath: vi.fn(() => "/tmp"),
-		setPath: vi.fn(),
-		isReady: vi.fn(() => true),
-	},
+const state = vi.hoisted(() => ({
+	active: true,
+	paused: false,
+	timeMs: 100,
+	point: { cx: 0.5, cy: 0.5 },
+	lastClick: null as { timeMs: number; cx: number; cy: number } | null,
+	push: vi.fn(),
 }));
 
-import {
-	repairBundledUiohookBinaryForCurrentArch,
-	shouldStartGlobalInteractionHook,
-} from "./interaction";
+vi.mock("../state", () => ({
+	get isCursorCaptureActive() {
+		return state.active;
+	},
+	get lastLeftClick() {
+		return state.lastClick;
+	},
+	setLastLeftClick: (click: typeof state.lastClick) => {
+		state.lastClick = click;
+	},
+}));
+vi.mock("./telemetry", () => ({
+	getCursorCaptureElapsedMs: () => state.timeMs,
+	getNormalizedCursorPoint: () => state.point,
+	isCursorCapturePaused: () => state.paused,
+	pushCursorSample: state.push,
+}));
 
-describe("shouldStartGlobalInteractionHook", () => {
-	it("does not start the synchronous uiohook event tap on macOS", () => {
-		expect(shouldStartGlobalInteractionHook("darwin")).toBe(false);
-	});
+import { recordCursorMouseDown, recordCursorMouseUp } from "./interaction";
 
-	it("keeps global interaction capture enabled on Windows and Linux", () => {
-		expect(shouldStartGlobalInteractionHook("win32")).toBe(true);
-		expect(shouldStartGlobalInteractionHook("linux")).toBe(true);
-	});
+beforeEach(() => {
+	state.active = true;
+	state.paused = false;
+	state.timeMs = 100;
+	state.point = { cx: 0.5, cy: 0.5 };
+	state.lastClick = null;
+	state.push.mockClear();
 });
 
-describe("repairBundledUiohookBinaryForCurrentArch", () => {
-	const tempRoots: string[] = [];
+it("preserves double-click telemetry delivered by the native Mac monitor", () => {
+	recordCursorMouseDown(1);
+	state.timeMs = 250;
+	recordCursorMouseDown(1);
+	expect(state.push.mock.calls.map((call) => call[3])).toEqual(["click", "double-click"]);
+	state.point = { cx: 0.7, cy: 0.5 };
+	state.timeMs = 300;
+	recordCursorMouseDown(1);
+	expect(state.push).toHaveBeenLastCalledWith(0.7, 0.5, 300, "click");
+});
 
-	afterEach(async () => {
-		await Promise.all(
-			tempRoots
-				.splice(0)
-				.map((tempRoot) => fs.rm(tempRoot, { recursive: true, force: true })),
-		);
-	});
+it("ignores events while capture is paused or inactive", () => {
+	state.paused = true;
+	recordCursorMouseDown(1);
+	recordCursorMouseUp();
+	state.paused = false;
+	state.active = false;
+	recordCursorMouseDown(2);
+	expect(state.push).not.toHaveBeenCalled();
+});
 
-	it("promotes the bundled darwin-arm64 prebuild over a stale incompatible build", async () => {
-		const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "recordly-uiohook-"));
-		tempRoots.push(tempRoot);
-
-		const packageRoot = path.join(tempRoot, "uiohook-napi");
-		const prebuildPath = path.join(packageRoot, "prebuilds", "darwin-arm64", "node.napi.node");
-		const buildPath = path.join(packageRoot, "build", "Release", "uiohook_napi.node");
-		await fs.mkdir(path.dirname(prebuildPath), { recursive: true });
-		await fs.mkdir(path.dirname(buildPath), { recursive: true });
-		await fs.writeFile(prebuildPath, "arm64-prebuild");
-		await fs.writeFile(buildPath, "x64-build");
-
-		const log = vi.fn();
-		const repaired = repairBundledUiohookBinaryForCurrentArch(
-			Object.assign(
-				new Error(
-					"mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64')",
-				),
-				{
-					code: "ERR_DLOPEN_FAILED",
-				},
-			),
-			{ packageRoot, platform: "darwin", arch: "arm64", log },
-		);
-
-		expect(repaired).toBe(true);
-		expect(await fs.readFile(buildPath, "utf8")).toBe("arm64-prebuild");
-		expect(log).toHaveBeenCalledWith(
-			"[CursorTelemetry] Repaired stale uiohook-napi binary using bundled darwin-arm64 prebuild.",
-		);
-	});
-
-	it("does not rewrite binaries for unrelated load failures", async () => {
-		const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "recordly-uiohook-"));
-		tempRoots.push(tempRoot);
-
-		const packageRoot = path.join(tempRoot, "uiohook-napi");
-		const buildPath = path.join(packageRoot, "build", "Release", "uiohook_napi.node");
-		await fs.mkdir(path.dirname(buildPath), { recursive: true });
-		await fs.writeFile(buildPath, "existing-build");
-
-		const repaired = repairBundledUiohookBinaryForCurrentArch(
-			Object.assign(new Error("some other dlopen failure"), {
-				code: "ERR_DLOPEN_FAILED",
-			}),
-			{ packageRoot, platform: "darwin", arch: "arm64" },
-		);
-
-		expect(repaired).toBe(false);
-		expect(await fs.readFile(buildPath, "utf8")).toBe("existing-build");
-	});
+it("preserves right-click, middle-click and release events", () => {
+	recordCursorMouseDown(2);
+	recordCursorMouseDown(3);
+	recordCursorMouseUp();
+	expect(state.push.mock.calls.map((call) => call[3])).toEqual([
+		"right-click",
+		"middle-click",
+		"mouseup",
+	]);
 });

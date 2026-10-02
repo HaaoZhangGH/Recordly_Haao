@@ -1,13 +1,13 @@
-export function supportsHudCaptureProtection(platform: string): boolean {
-	return platform === "darwin" || platform === "win32";
+export function supportsHudCaptureProtection(_platform: string): boolean {
+	return true;
 }
 
 export function getHudCaptureExcludedProcessIds(
-	platform: string,
+	_platform: string,
 	enabled: boolean,
 	processId: number,
 ): number[] {
-	if (platform !== "darwin" || !enabled || !Number.isSafeInteger(processId) || processId <= 0) {
+	if (!enabled || !Number.isSafeInteger(processId) || processId <= 0) {
 		return [];
 	}
 

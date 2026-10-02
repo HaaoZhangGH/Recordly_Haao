@@ -1,8 +1,8 @@
-import { useCallback, useRef } from "react";
 import { toast } from "@/components/ui/toast";
 import { getMp4ExportBitrate } from "@/lib/exporter/exportBitrate";
 import { DEFAULT_MP4_CODEC } from "@/lib/exporter/mp4Support";
 import type { ExportSettings } from "@/lib/exporter/types";
+import { useCallback, useRef } from "react";
 import { calculateMp4ExportDimensions, capMp4ShareDimensions } from "../exportDimensions";
 import { resolveMp4ExportRouting } from "../mp4ExportRouting";
 import { resolveMp4ExportSettings } from "../mp4ExportSettings";
@@ -46,8 +46,6 @@ export function useExportRunner(input: ExportRunnerInput) {
 				effectiveShowCursor,
 				ensureSupportedMp4SourceDimensions,
 				captionSidecarPayload,
-				experimentalNvidiaCudaExport,
-				nvidiaCudaExportAvailable,
 				remountPreview,
 			} = inputRef.current;
 			const { shadowIntensity, padding } = appearance;
@@ -236,24 +234,18 @@ export function useExportRunner(input: ExportRunnerInput) {
 							exportEncodingMode,
 							mp4FrameRate,
 						});
-					const {
-						pipelineModel,
-						useExperimentalNativeExport,
-						useExperimentalNvidiaCudaExport,
-						backendPreference,
-					} = resolveMp4ExportRouting({
-						smokeExportConfig: {
-							enabled: smokeExportConfig.enabled,
-							pipelineModel: smokeExportConfig.pipelineModel,
-							useNativeExport: smokeExportConfig.useNativeExport,
-							backendPreference: smokeExportConfig.backendPreference,
-						},
-						settings,
-						exportPipelineModel,
-						exportBackendPreference,
-						experimentalNvidiaCudaExport,
-						nvidiaCudaExportAvailable,
-					});
+					const { pipelineModel, useExperimentalNativeExport, backendPreference } =
+						resolveMp4ExportRouting({
+							smokeExportConfig: {
+								enabled: smokeExportConfig.enabled,
+								pipelineModel: smokeExportConfig.pipelineModel,
+								useNativeExport: smokeExportConfig.useNativeExport,
+								backendPreference: smokeExportConfig.backendPreference,
+							},
+							settings,
+							exportPipelineModel,
+							exportBackendPreference,
+						});
 					const supportedSourceDimensions = await ensureSupportedMp4SourceDimensions(
 						selectedMp4FrameRate,
 						{
@@ -297,7 +289,6 @@ export function useExportRunner(input: ExportRunnerInput) {
 						preferredEncoderPath: supportedSourceDimensions.encoderPath,
 						preferredRenderBackend: smokeExportConfig.renderBackend,
 						experimentalNativeExport: useExperimentalNativeExport,
-						experimentalNvidiaCudaExport: useExperimentalNvidiaCudaExport,
 						maxEncodeQueue: smokeExportConfig.maxEncodeQueue,
 						maxDecodeQueue: smokeExportConfig.maxDecodeQueue,
 						maxPendingFrames: smokeExportConfig.maxPendingFrames,

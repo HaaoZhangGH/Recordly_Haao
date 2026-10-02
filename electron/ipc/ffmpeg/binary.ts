@@ -1,7 +1,7 @@
+import { app } from "electron";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
-import { app } from "electron";
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -48,7 +48,7 @@ export function loadFfprobeStatic(): string | null {
 }
 
 export function resolveSystemFfmpegBinaryPath(): string | null {
-	const locator = process.platform === "win32" ? "where" : "which";
+	const locator = "which";
 	const result = spawnSync(locator, ["ffmpeg"], {
 		encoding: "utf-8",
 		windowsHide: true,
@@ -66,7 +66,7 @@ export function resolveSystemFfmpegBinaryPath(): string | null {
 	}
 
 	// Fallback: check common install paths directly (Electron's shell may lack full PATH)
-	if (process.platform !== "win32") {
+	{
 		const commonPaths = [
 			"/opt/homebrew/bin/ffmpeg",
 			"/usr/local/bin/ffmpeg",
@@ -83,7 +83,7 @@ export function resolveSystemFfmpegBinaryPath(): string | null {
 }
 
 export function resolveSystemFfprobeBinaryPath(): string | null {
-	const locator = process.platform === "win32" ? "where" : "which";
+	const locator = "which";
 	const result = spawnSync(locator, ["ffprobe"], {
 		encoding: "utf-8",
 		windowsHide: true,
@@ -100,7 +100,7 @@ export function resolveSystemFfprobeBinaryPath(): string | null {
 		}
 	}
 
-	if (process.platform !== "win32") {
+	{
 		const commonPaths = [
 			"/opt/homebrew/bin/ffprobe",
 			"/usr/local/bin/ffprobe",

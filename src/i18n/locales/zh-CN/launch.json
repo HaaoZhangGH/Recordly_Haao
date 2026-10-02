@@ -54,7 +54,17 @@
 			"upToDateTitle": "Recordly {{version}} 已是最新版本。",
 			"availableTitle": "Recordly {{version}} 可更新。",
 			"availableGenericTitle": "有可用更新。"
-		}
+		},
+		"pickWindow": "录制窗口…",
+		"pickScreen": "录制整个屏幕…",
+		"pickerHint": "选中窗口或屏幕后确认，即按倒计时设置开始录制。",
+		"pickerFailed": "系统选择器暂不可用，请重试或从下方列表选择。",
+		"chooseFromList": "从列表选择…",
+		"chooseTarget": "窗口 / 屏幕",
+		"permission_screen": "尚未获得录屏权限。请在系统设置中允许 Recordly，然后再次点击录制。",
+		"permission_accessibility": "尚未获得光标跟踪权限。请在「隐私与安全 → 设备控制和数据访问」（旧版 macOS 为「辅助功能」）中添加并开启 Recordly，然后重试录制。",
+		"permission_unavailable": "暂时无法读取权限状态，请重试。",
+		"openPermissionSettings": "打开权限设置"
 	},
 	"sourceSelector": {
 		"loadingSources": "正在加载源...",

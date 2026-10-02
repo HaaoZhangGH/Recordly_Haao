@@ -4,7 +4,6 @@ import type { SmokeExportConfig } from "./smokeExportConfig";
 export type Mp4ExportRouting = {
 	pipelineModel: ExportPipelineModel;
 	useExperimentalNativeExport: boolean;
-	useExperimentalNvidiaCudaExport: boolean;
 	backendPreference: ExportBackendPreference;
 };
 
@@ -13,8 +12,6 @@ export function resolveMp4ExportRouting({
 	settings,
 	exportPipelineModel,
 	exportBackendPreference,
-	experimentalNvidiaCudaExport,
-	nvidiaCudaExportAvailable,
 }: {
 	smokeExportConfig: Pick<
 		SmokeExportConfig,
@@ -23,8 +20,6 @@ export function resolveMp4ExportRouting({
 	settings: Pick<ExportSettings, "pipelineModel" | "backendPreference">;
 	exportPipelineModel: ExportPipelineModel;
 	exportBackendPreference: ExportBackendPreference;
-	experimentalNvidiaCudaExport: boolean;
-	nvidiaCudaExportAvailable: boolean;
 }): Mp4ExportRouting {
 	const pipelineModel = smokeExportConfig.enabled
 		? (smokeExportConfig.pipelineModel ?? "modern")
@@ -32,8 +27,6 @@ export function resolveMp4ExportRouting({
 	const useExperimentalNativeExport =
 		pipelineModel === "modern" &&
 		(smokeExportConfig.enabled ? smokeExportConfig.useNativeExport : true);
-	const useExperimentalNvidiaCudaExport =
-		useExperimentalNativeExport && experimentalNvidiaCudaExport && nvidiaCudaExportAvailable;
 	const backendPreference =
 		pipelineModel === "legacy"
 			? "webcodecs"
@@ -47,7 +40,6 @@ export function resolveMp4ExportRouting({
 	return {
 		pipelineModel,
 		useExperimentalNativeExport,
-		useExperimentalNvidiaCudaExport,
 		backendPreference,
 	};
 }

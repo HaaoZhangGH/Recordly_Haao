@@ -2,6 +2,7 @@ import { ipcMain, shell, systemPreferences } from "electron";
 import { getMacPrivacySettingsUrl } from "../utils";
 
 export function registerPermissionHandlers() {
+	let accessibilityPromptRequested = false;
 	ipcMain.handle("open-external-url", async (_, url: string) => {
 		try {
 			// Security: only allow http/https URLs to prevent file:// or custom protocol abuse
@@ -18,10 +19,6 @@ export function registerPermissionHandlers() {
 	});
 
 	ipcMain.handle("get-accessibility-permission-status", () => {
-		if (process.platform !== "darwin") {
-			return { success: true, trusted: true, prompted: false };
-		}
-
 		return {
 			success: true,
 			trusted: systemPreferences.isTrustedAccessibilityClient(false),
@@ -30,22 +27,17 @@ export function registerPermissionHandlers() {
 	});
 
 	ipcMain.handle("request-accessibility-permission", () => {
-		if (process.platform !== "darwin") {
-			return { success: true, trusted: true, prompted: false };
-		}
-
+		const trusted = systemPreferences.isTrustedAccessibilityClient(false);
+		const prompted = !trusted && !accessibilityPromptRequested;
+		if (prompted) accessibilityPromptRequested = true;
 		return {
 			success: true,
-			trusted: systemPreferences.isTrustedAccessibilityClient(true),
-			prompted: true,
+			trusted: prompted ? systemPreferences.isTrustedAccessibilityClient(true) : trusted,
+			prompted,
 		};
 	});
 
 	ipcMain.handle("get-screen-recording-permission-status", () => {
-		if (process.platform !== "darwin") {
-			return { success: true, status: "granted" };
-		}
-
 		try {
 			return {
 				success: true,
@@ -58,10 +50,6 @@ export function registerPermissionHandlers() {
 	});
 
 	ipcMain.handle("open-screen-recording-preferences", async () => {
-		if (process.platform !== "darwin") {
-			return { success: true };
-		}
-
 		try {
 			await shell.openExternal(getMacPrivacySettingsUrl("screen"));
 			return { success: true };
@@ -72,10 +60,6 @@ export function registerPermissionHandlers() {
 	});
 
 	ipcMain.handle("open-accessibility-preferences", async () => {
-		if (process.platform !== "darwin") {
-			return { success: true };
-		}
-
 		try {
 			await shell.openExternal(getMacPrivacySettingsUrl("accessibility"));
 			return { success: true };

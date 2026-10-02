@@ -118,22 +118,17 @@ describe("macOS distribution architecture policy", () => {
 			parseLipoArchitectures("Architectures in the fat file: App are: x86_64 arm64"),
 		).toEqual(["x86_64", "arm64"]);
 	});
-
-	it("uses path-specific helper architecture before the build architecture", () => {
+	it("requires arm64 for the application and helpers", () => {
 		expect(
-			expectedMachOArchitecture("app/electron/native/bin/darwin-arm64/helper", "x64"),
+			expectedMachOArchitecture("app/electron/native/bin/darwin-arm64/helper", "arm64"),
 		).toBe("arm64");
-		expect(
-			expectedMachOArchitecture("app/electron/native/bin/darwin-x64/helper", "arm64"),
-		).toBe("x86_64");
-		expect(expectedMachOArchitecture("Recordly.app/Contents/MacOS/Recordly", "x64")).toBe(
-			"x86_64",
+		expect(expectedMachOArchitecture("Recordly.app/Contents/MacOS/Recordly", "arm64")).toBe(
+			"arm64",
 		);
 	});
-
-	it("reports a binary that lacks the required architecture", () => {
+	it("rejects an Intel-only binary", () => {
 		expect(
-			collectArchitectureErrors("Recordly.app/Contents/MacOS/Recordly", "arm64", "x64"),
-		).toEqual(["Recordly.app/Contents/MacOS/Recordly does not contain x86_64 (found: arm64)"]);
+			collectArchitectureErrors("Recordly.app/Contents/MacOS/Recordly", "x86_64", "arm64"),
+		).toEqual(["Recordly.app/Contents/MacOS/Recordly does not contain arm64 (found: x86_64)"]);
 	});
 });

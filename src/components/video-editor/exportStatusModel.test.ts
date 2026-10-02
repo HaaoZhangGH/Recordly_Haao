@@ -155,22 +155,4 @@ describe("resolveExportStatusModel", () => {
 
 		expect(status.runtimeLabel).toBe("VideoEncoder");
 	});
-
-	it("prefers multiple native skip reasons over the single legacy reason", () => {
-		const status = resolveExportStatusModel({
-			isExporting: true,
-			exportProgress: progress({
-				nativeStaticLayoutSkipReason: "legacy-reason",
-				nativeStaticLayoutSkipReasons: ["timeline-edits-present", "unsupported-background"],
-			}),
-			exportFormat: "mp4",
-			exportPipelineModel: "modern",
-		});
-
-		expect(status.nativeSkipReasons).toEqual([
-			"timeline-edits-present",
-			"unsupported-background",
-		]);
-		expect(status.nativeSkipLabel).toBe("Native skipped: timeline-edits-present (+1 more)");
-	});
 });

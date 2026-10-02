@@ -1,7 +1,3 @@
-import { clearRecordingTrashUndo } from "./ipc/recording/library";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	app,
 	BrowserWindow,
@@ -13,20 +9,21 @@ import {
 	nativeImage,
 	session,
 	shell,
-	systemPreferences,
 	Tray,
 } from "electron";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { RECORDINGS_DIR } from "./appPaths";
 import { createAuthCallbackController } from "./authCallback";
-import { showCursor } from "./cursorHider";
 import { getGpuSwitches } from "./gpuSwitches";
 import {
 	cleanupAllExportStreams,
 	cleanupNativeVideoExportSessions,
 	getSelectedSourceId,
-	killWindowsCaptureProcess,
 	registerIpcHandlers,
 } from "./ipc/handlers";
+import { clearRecordingTrashUndo } from "./ipc/recording/library";
 import { ensureMediaServer } from "./mediaServer";
 import { hardenWebContentsNavigation, shouldHardenWebContentsType } from "./navigationPolicy";
 import { shouldGrantDisplayCapture, shouldGrantMediaPermission } from "./permissionPolicy";
@@ -41,25 +38,27 @@ import {
 	getUpdaterLogPath,
 	getUpdateStatusSummary,
 	installDownloadedUpdateNow,
-	previewNativeUpdateDialog,
 	previewUpdateToast,
 	setExperimentalUpdatesEnabled,
 	setupAutoUpdates,
 	skipAvailableUpdateVersion,
 } from "./updater";
 import {
+	beginHudCaptureProtection,
 	createEditorWindow,
 	createHudOverlayWindow,
 	createSourceSelectorWindow,
 	getHudOverlayWindow,
 	getUpdateToastWindow,
 	hideUpdateToastWindow,
-	isHudOverlayMousePassthroughSupported,
-	beginHudCaptureProtection,
 	reassertHudOverlayMousePassthrough as reassertHudOverlayMouseState,
 	setHudOverlayRecordingActive,
 	showUpdateToastWindow,
 } from "./windows";
+
+if (process.platform !== "darwin" || process.arch !== "arm64") {
+	throw new Error("This Recordly fork supports Apple Silicon Macs only.");
+}
 
 const electronMainDir = path.dirname(fileURLToPath(import.meta.url));
 const IS_SMOKE_EXPORT = process.env.RECORDLY_SMOKE_EXPORT === "1";
@@ -89,7 +88,7 @@ app.on("web-contents-created", (_event, contents) => {
 });
 
 function configureGpuAccelerationSwitches() {
-	const { useAngle, useGl, disableFeatures } = getGpuSwitches(process.platform, process.env);
+	const { useAngle, useGl, disableFeatures } = getGpuSwitches("darwin", process.env);
 	if (useAngle) {
 		app.commandLine.appendSwitch("use-angle", useAngle);
 	}
@@ -175,11 +174,9 @@ function isHudWebContents(webContents: Electron.WebContents | null): boolean {
 let mainWindow: BrowserWindow | null = null;
 let sourceSelectorWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let trayContextMenu: Menu | null = null;
 let selectedSourceName = "";
 let editorHasUnsavedChanges = false;
 let isForceClosing = false;
-let isAppQuitting = false;
 let isCreatingMainWindow = false;
 let isCreatingEditorWindow = false;
 const shouldEnforceSingleInstanceLock = !IS_DEV;
@@ -208,29 +205,8 @@ function closeEditorWindowBypassingUnsavedPrompt(window: BrowserWindow | null) {
 	window.close();
 }
 
-function closeEditorWindowToHud(window: BrowserWindow | null) {
-	if (!window || window.isDestroyed()) {
-		return;
-	}
-
-	// The HUD renderer normally remains hidden while the editor is open so
-	// recording finalization can continue. Restore that HUD before destroying
-	// the editor, keeping Recordly in its ready-to-record state on the taskbar.
-	window.hide();
-	if (mainWindow === window) {
-		mainWindow = null;
-	}
-	createWindow();
-	closeEditorWindowBypassingUnsavedPrompt(window);
-}
-
 function restoreWindowSafely(window: BrowserWindow | null) {
 	if (!window || window.isDestroyed()) {
-		return;
-	}
-
-	if (!isEditorWindow(window) && process.platform === "win32") {
-		showHudOverlayFromTray();
 		return;
 	}
 
@@ -259,7 +235,7 @@ let defaultTrayIcon: ReturnType<typeof getTrayIcon> | null = null;
 let recordingTrayIcon: ReturnType<typeof getTrayIcon> | null = null;
 
 function getPlatformAppIconFilename(size: 32 | 128 | 512) {
-	const baseName = process.platform === "darwin" ? "recordlymac" : "recordly";
+	const baseName = "recordlymac";
 	return `app-icons/${baseName}-${size}.png`;
 }
 
@@ -293,13 +269,6 @@ function showHudOverlayFromTray() {
 
 	if (hud.isMinimized()) {
 		hud.restore();
-	}
-
-	if (process.platform === "win32" && isHudOverlayMousePassthroughSupported()) {
-		hud.showInactive();
-		hud.moveTop();
-		reassertHudOverlayMouseState();
-		return true;
 	}
 
 	hud.show();
@@ -380,17 +349,6 @@ function focusOrCreateMainWindow() {
 		// work because they receive an XDG activation token via StatusNotifierItem.ProvideXdgActivationToken;
 		// Electron's tray doesn't handle that yet. Workaround: destroy and recreate the HUD so the new
 		// window gets focus (creation path works). Only for HUD, not editor.
-		if (
-			process.platform === "linux" &&
-			!mainWindow.isFocused() &&
-			!isEditorWindow(mainWindow)
-		) {
-			const win = mainWindow;
-			mainWindow = null;
-			win.once("closed", () => createWindow());
-			win.destroy();
-			return;
-		}
 
 		// On Win32 with mouse passthrough enabled (Win11+), calling
 		// show/moveTop/focus on the transparent HUD overlay permanently corrupts
@@ -398,14 +356,6 @@ function focusOrCreateMainWindow() {
 		// the editor window; the HUD is alwaysOnTop so it doesn't need explicit
 		// focus.  On Win10 (passthrough disabled), the HUD is always interactive
 		// and can be safely shown/restored.
-		if (
-			process.platform === "win32" &&
-			!isEditorWindow(mainWindow) &&
-			isHudOverlayMousePassthroughSupported()
-		) {
-			showHudOverlayFromTray();
-			return;
-		}
 
 		mainWindow.show();
 		if (mainWindow.isMinimized()) mainWindow.restore();
@@ -439,9 +389,8 @@ function sendEditorMenuAction(
 }
 
 function setupApplicationMenu() {
-	const isMac = process.platform === "darwin";
 	const template: Electron.MenuItemConstructorOptions[] = [];
-	if (isMac) {
+	{
 		template.push({
 			label: app.name,
 			submenu: [
@@ -477,12 +426,7 @@ function setupApplicationMenu() {
 					accelerator: "CmdOrCtrl+Shift+S",
 					click: () => sendEditorMenuAction("menu-save-project-as"),
 				},
-				...(isMac
-					? []
-					: [
-							{ type: "separator" as const },
-							{ role: "quit" as const, accelerator: "CmdOrCtrl+Q" },
-						]),
+				...[],
 			],
 		},
 		{
@@ -513,9 +457,12 @@ function setupApplicationMenu() {
 		},
 		{
 			label: "Window",
-			submenu: isMac
-				? [{ role: "minimize" }, { role: "zoom" }, { type: "separator" }, { role: "front" }]
-				: [{ role: "minimize" }, { role: "close" }],
+			submenu: [
+				{ role: "minimize" },
+				{ role: "zoom" },
+				{ type: "separator" },
+				{ role: "front" },
+			],
 		},
 		{
 			label: "Help",
@@ -534,34 +481,11 @@ function setupApplicationMenu() {
 	Menu.setApplicationMenu(menu);
 }
 
-function isPrimaryTrayClick(event: unknown) {
-	const button =
-		event && typeof event === "object" && "button" in event
-			? (event as { button?: number | string }).button
-			: undefined;
-	return button === undefined || button === 0 || button === "left";
-}
-
 function createTray() {
 	tray = new Tray(getDefaultTrayIcon());
-	tray.on("click", (event) => {
-		if (process.platform === "win32" && !isPrimaryTrayClick(event)) {
-			return;
-		}
-
+	tray.on("click", (_event) => {
 		focusOrCreateMainWindow();
 	});
-
-	if (process.platform === "win32") {
-		tray.on("right-click", () => {
-			if (!tray || !trayContextMenu) {
-				return;
-			}
-
-			tray.popUpContextMenu(trayContextMenu);
-		});
-		return;
-	}
 
 	tray.on("double-click", () => focusOrCreateMainWindow());
 }
@@ -569,7 +493,7 @@ function createTray() {
 function shouldUseTray() {
 	// macOS and Windows expose Recordly through their Dock/taskbar. Keep the
 	// tray entry only on Linux, where it remains the primary app entry point.
-	return process.platform === "linux";
+	return false;
 }
 
 function getPublicAssetPath(filename: string) {
@@ -589,7 +513,7 @@ function getTrayIcon(filename: string) {
 }
 
 function syncDockIcon() {
-	if (process.platform !== "darwin" || !app.dock) {
+	if (!app.dock) {
 		return;
 	}
 
@@ -600,10 +524,6 @@ function syncDockIcon() {
 }
 
 function sendUpdateToastToWindows(channel: "update-toast-state", payload: unknown) {
-	if (process.platform !== "darwin") {
-		return false;
-	}
-
 	if (!payload) {
 		const existingWindow = getUpdateToastWindow();
 		if (existingWindow) {
@@ -696,11 +616,6 @@ ipcMain.handle("set-experimental-updates-enabled", async (_event, enabled: unkno
 });
 
 ipcMain.handle("preview-update-toast", async () => {
-	if (process.platform !== "darwin") {
-		await previewNativeUpdateDialog(getUpdateDialogWindow);
-		return { success: true };
-	}
-
 	return { success: previewUpdateToast(sendUpdateToastToWindows) };
 });
 
@@ -749,10 +664,9 @@ function updateTrayMenu(recording: boolean = false) {
 				},
 			];
 	const menu = Menu.buildFromTemplate(menuTemplate);
-	trayContextMenu = menu;
 	tray.setImage(trayIcon);
 	tray.setToolTip(trayToolTip);
-	if (process.platform !== "win32") {
+	{
 		tray.setContextMenu(menu);
 	}
 }
@@ -813,10 +727,6 @@ function createEditorWindowWrapper() {
 
 	editorWindow.on("close", (event) => {
 		if (isForceClosing || !editorHasUnsavedChanges) {
-			if (process.platform === "win32" && !isForceClosing && !isAppQuitting) {
-				event.preventDefault();
-				closeEditorWindowToHud(editorWindow);
-			}
 			return;
 		}
 
@@ -836,24 +746,17 @@ function createEditorWindowWrapper() {
 			editorWindow.webContents.send("request-save-before-close");
 			ipcMain.once("save-before-close-done", (_event, saved: boolean) => {
 				if (!saved) {
-					isAppQuitting = false;
 					return;
 				}
 
-				if (process.platform === "win32" && !isAppQuitting) {
-					closeEditorWindowToHud(editorWindow);
-				} else {
+				{
 					closeEditorWindowBypassingUnsavedPrompt(editorWindow);
 				}
 			});
 		} else if (choice === 1) {
-			if (process.platform === "win32" && !isAppQuitting) {
-				closeEditorWindowToHud(editorWindow);
-			} else {
+			{
 				closeEditorWindowBypassingUnsavedPrompt(editorWindow);
 			}
-		} else {
-			isAppQuitting = false;
 		}
 	});
 
@@ -871,19 +774,17 @@ function createSourceSelectorWindowWrapper() {
 // On macOS, applications and their menu bar stay active until the user quits
 // explicitly with Cmd + Q.
 app.on("before-quit", () => {
-	isAppQuitting = true;
 	authCallbacks.close();
 	void clearRecordingTrashUndo().catch((error) =>
 		console.warn("Could not clear recording undo cache", error),
 	);
-	killWindowsCaptureProcess();
-	showCursor();
+
 	cleanupNativeVideoExportSessions();
 	void cleanupAllExportStreams();
 });
 
 app.on("window-all-closed", () => {
-	if (IS_SMOKE_EXPORT || process.platform !== "darwin") {
+	if (IS_SMOKE_EXPORT) {
 		app.quit();
 	}
 });
@@ -912,10 +813,6 @@ app.whenReady().then(async () => {
 	}
 	const startupAuthCallback = authCallbacks.find(process.argv);
 	if (startupAuthCallback) authCallbacks.dispatch(startupAuthCallback);
-
-	if (process.platform === "win32") {
-		app.setAppUserModelId("dev.recordly.app");
-	}
 
 	session.defaultSession.setPermissionCheckHandler(
 		(webContents, permission, requestingOrigin, details) => {
@@ -963,20 +860,6 @@ app.whenReady().then(async () => {
 	// here blocks the first window behind two modal OS permission flows and makes
 	// a fresh install look hung. Windows has no equivalent request API, so retain
 	// its diagnostic warnings.
-	if (process.platform === "win32") {
-		const cameraStatus = systemPreferences.getMediaAccessStatus("camera");
-		const micStatus = systemPreferences.getMediaAccessStatus("microphone");
-		if (cameraStatus !== "granted") {
-			console.warn(
-				`[permissions] Camera access is "${cameraStatus}" — webcam may not work. Check Windows Settings > Privacy > Camera.`,
-			);
-		}
-		if (micStatus !== "granted") {
-			console.warn(
-				`[permissions] Microphone access is "${micStatus}" — mic recording may not work. Check Windows Settings > Privacy > Microphone.`,
-			);
-		}
-	}
 
 	ipcMain.on("hud-overlay-close", () => {
 		const hud = getHudOverlayWindow();
@@ -995,7 +878,7 @@ app.whenReady().then(async () => {
 			}
 		}, 100);
 	});
-	if (process.platform === "darwin" && app.dock) {
+	if (app.dock) {
 		await app.dock.show();
 	}
 	syncDockIcon();
@@ -1061,12 +944,10 @@ app.whenReady().then(async () => {
 	setupAutoUpdates(getUpdateDialogWindow, sendUpdateToastToWindows);
 	if (IS_DEV && process.env.RECORDLY_DEV_PREVIEW_UPDATE === "1") {
 		setTimeout(() => {
-			if (process.platform === "darwin") {
+			{
 				previewUpdateToast(sendUpdateToastToWindows);
 				return;
 			}
-
-			void previewNativeUpdateDialog(getUpdateDialogWindow);
 		}, 750);
 	}
 
@@ -1107,29 +988,11 @@ app.whenReady().then(async () => {
 				return;
 			}
 
-			// Browser and Linux portal capture starts as soon as this callback
+			// Browser capture starts as soon as this callback
 			// resolves, before recording-state-changed is emitted.
 			beginHudCaptureProtection();
 
 			const sourceId = getSelectedSourceId();
-			// On Linux/Wayland, calling desktopCapturer.getSources() itself
-			// invokes the xdg-desktop-portal picker. If we then return one of
-			// those sources, Chromium triggers a SECOND portal because the
-			// pre-enumerated source IDs are stale on Wayland. To collapse this
-			// into a single portal invocation, when the Linux portal sentinel
-			// is set we skip getSources entirely and hand back a synthetic
-			// source id; Chromium then opens the portal once to actually
-			// resolve the capture.
-			// Default to the sentinel on Linux when no source has been
-			// pre-selected (e.g. fresh session where the renderer skipped the
-			// source picker entirely). This avoids calling getSources() which
-			// would itself trigger an extra portal dialog.
-			const isLinuxPortalSentinel =
-				process.platform === "linux" && (sourceId === "screen:linux-portal" || !sourceId);
-			if (isLinuxPortalSentinel) {
-				callback({ video: { id: "screen:0:0", name: "Entire screen" } });
-				return;
-			}
 			const sources = await desktopCapturer.getSources({ types: ["screen", "window"] });
 			const source = sourceId
 				? (sources.find((s) => s.id === sourceId) ?? sources[0])

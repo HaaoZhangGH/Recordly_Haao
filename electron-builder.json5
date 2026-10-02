@@ -1,4 +1,4 @@
-// @see - https://www.electron.build/configuration/configuration
+// Apple Silicon macOS distribution.
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "dev.recordly.app",
@@ -7,14 +7,15 @@
   "asarUnpack": [
     "node_modules/ffmpeg-static/**",
     "node_modules/ffprobe-static/**",
-    "node_modules/uiohook-napi/**",
     "electron/native/bin/**"
   ],
   "productName": "Recordly",
   "protocols": [
     {
       "name": "Recordly authentication",
-      "schemes": ["recordly"]
+      "schemes": [
+        "recordly"
+      ]
     }
   ],
   "npmRebuild": true,
@@ -27,21 +28,19 @@
     "dist",
     "!dist/wallpapers/**",
     "dist-electron",
-    "electron/native/bin",
     "!electron/native/bin/**/whisper-bench*",
     "!electron/native/bin/**/whisper-quantize*",
     "!electron/native/bin/**/whisper-server*",
     "!electron/native/bin/**/whisper-vad-speech-segments*",
-    "!node_modules/ffprobe-static/bin/darwin/**",
-    "!node_modules/ffprobe-static/bin/linux/**",
-    "!node_modules/ffprobe-static/bin/win32/ia32/**",
     "!electron/native/**/build/**",
     "!*.png",
     "!preview*.png",
     "!*.md",
     "!README.md",
     "!CONTRIBUTING.md",
-    "!LICENSE"
+    "!LICENSE",
+    "!node_modules/ffprobe-static/bin/**",
+    "electron/native/bin/darwin-arm64/**"
   ],
   "extraResources": [
     {
@@ -52,13 +51,12 @@
   "publish": [
     {
       "provider": "github",
-      "owner": "webadderall",
-      "repo": "Recordly",
+      "owner": "HaaoZhangGH",
+      "repo": "Recordly_Haao",
       "tagNamePrefix": "v",
       "publishAutoUpdate": true
     }
   ],
-
   "mac": {
     "hardenedRuntime": true,
     "entitlements": "build/entitlements.mac.plist",
@@ -66,11 +64,15 @@
     "target": [
       {
         "target": "dmg",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "arm64"
+        ]
       },
       {
         "target": "zip",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "arm64"
+        ]
       }
     ],
     "icon": "icons/icons/mac/icon.icns",
@@ -85,46 +87,31 @@
         {
           "CFBundleTypeName": "Recordly Project",
           "CFBundleTypeRole": "Editor",
-          "CFBundleTypeExtensions": ["recordly"],
+          "CFBundleTypeExtensions": [
+            "recordly"
+          ],
           "CFBundleTypeIconFile": "icon.icns",
           "LSHandlerRank": "Owner",
-          "LSItemContentTypes": ["dev.recordly.app.project"]
+          "LSItemContentTypes": [
+            "dev.recordly.app.project"
+          ]
         }
       ],
       "UTExportedTypeDeclarations": [
         {
           "UTTypeIdentifier": "dev.recordly.app.project",
           "UTTypeDescription": "Recordly Project",
-          "UTTypeConformsTo": ["public.json"],
+          "UTTypeConformsTo": [
+            "public.json"
+          ],
           "UTTypeTagSpecification": {
-            "public.filename-extension": ["recordly"],
+            "public.filename-extension": [
+              "recordly"
+            ],
             "public.mime-type": "application/x-recordly-project"
           }
         }
       ]
     }
-  },
-  "linux": {
-    "target": [
-      "AppImage"
-    ],
-    "icon": "icons/icons/png",
-    "artifactName": "${productName}-linux-x64.${ext}",
-    "category": "AudioVideo"
-  },
-  "win": {
-    "target": [
-      "nsis"
-    ],
-    "icon": "icons/icons/win/icon.ico",
-    "executableName": "Recordly",
-    "artifactName": "${productName}-windows-${arch}.${ext}"
-  },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true,
-    "shortcutName": "Recordly"
   }
 }

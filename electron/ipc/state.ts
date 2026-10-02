@@ -35,26 +35,8 @@ export let nativeCapturePaused = false;
 export let nativeCursorMonitorProcess: ChildProcessWithoutNullStreams | null = null;
 export let nativeCursorMonitorOutputBuffer = "";
 
-// ── Windows native capture ────────────────────────────────────────────────────
-export let windowsCaptureProcess: ChildProcessWithoutNullStreams | null = null;
-export let windowsCaptureOutputBuffer = "";
-export let windowsCaptureTargetPath: string | null = null;
-export let windowsNativeCaptureActive = false;
-export let windowsCaptureStopRequested = false;
-export let windowsCapturePaused = false;
-export let windowsSystemAudioPath: string | null = null;
-export let windowsMicAudioPath: string | null = null;
-export let windowsOrphanedMicAudioPath: string | null = null;
-export let windowsPendingVideoPath: string | null = null;
-
 // ── Diagnostics ───────────────────────────────────────────────────────────────
 export let lastNativeCaptureDiagnostics: NativeCaptureDiagnostics | null = null;
-
-// ── FFmpeg capture ────────────────────────────────────────────────────────────
-export let ffmpegScreenRecordingActive = false;
-export let ffmpegCaptureProcess: ChildProcessWithoutNullStreams | null = null;
-export let ffmpegCaptureOutputBuffer = "";
-export let ffmpegCaptureTargetPath: string | null = null;
 
 // ── Recordings directory ──────────────────────────────────────────────────────
 export let customRecordingsDir: string | null = null;
@@ -81,10 +63,7 @@ export let cursorCapturePauseStartedAtMs: number | null = null;
 export let activeCursorSamples: CursorTelemetryPoint[] = [];
 export let pendingCursorSamples: CursorTelemetryPoint[] = [];
 export let isCursorCaptureActive = false;
-export let interactionCaptureCleanup: (() => void) | null = null;
-export let hasLoggedInteractionHookFailure = false;
 export let lastLeftClick: { timeMs: number; cx: number; cy: number } | null = null;
-export let linuxCursorScreenPoint: { x: number; y: number; updatedAt: number } | null = null;
 export let selectedWindowBounds: WindowBounds | null = null;
 export let windowBoundsCaptureInterval: NodeJS.Timeout | null = null;
 
@@ -154,52 +133,8 @@ export function setNativeCursorMonitorOutputBuffer(v: string) {
 	nativeCursorMonitorOutputBuffer = v;
 }
 
-export function setWindowsCaptureProcess(v: ChildProcessWithoutNullStreams | null) {
-	windowsCaptureProcess = v;
-}
-export function setWindowsCaptureOutputBuffer(v: string) {
-	windowsCaptureOutputBuffer = v;
-}
-export function setWindowsCaptureTargetPath(v: string | null) {
-	windowsCaptureTargetPath = v;
-}
-export function setWindowsNativeCaptureActive(v: boolean) {
-	windowsNativeCaptureActive = v;
-}
-export function setWindowsCaptureStopRequested(v: boolean) {
-	windowsCaptureStopRequested = v;
-}
-export function setWindowsCapturePaused(v: boolean) {
-	windowsCapturePaused = v;
-}
-export function setWindowsSystemAudioPath(v: string | null) {
-	windowsSystemAudioPath = v;
-}
-export function setWindowsMicAudioPath(v: string | null) {
-	windowsMicAudioPath = v;
-}
-export function setWindowsOrphanedMicAudioPath(v: string | null) {
-	windowsOrphanedMicAudioPath = v;
-}
-export function setWindowsPendingVideoPath(v: string | null) {
-	windowsPendingVideoPath = v;
-}
-
 export function setLastNativeCaptureDiagnostics(v: NativeCaptureDiagnostics | null) {
 	lastNativeCaptureDiagnostics = v;
-}
-
-export function setFfmpegScreenRecordingActive(v: boolean) {
-	ffmpegScreenRecordingActive = v;
-}
-export function setFfmpegCaptureProcess(v: ChildProcessWithoutNullStreams | null) {
-	ffmpegCaptureProcess = v;
-}
-export function setFfmpegCaptureOutputBuffer(v: string) {
-	ffmpegCaptureOutputBuffer = v;
-}
-export function setFfmpegCaptureTargetPath(v: string | null) {
-	ffmpegCaptureTargetPath = v;
 }
 
 export function setCustomRecordingsDir(v: string | null) {
@@ -254,17 +189,8 @@ export function setPendingCursorSamples(v: CursorTelemetryPoint[]) {
 export function setIsCursorCaptureActive(v: boolean) {
 	isCursorCaptureActive = v;
 }
-export function setInteractionCaptureCleanup(v: (() => void) | null) {
-	interactionCaptureCleanup = v;
-}
-export function setHasLoggedInteractionHookFailure(v: boolean) {
-	hasLoggedInteractionHookFailure = v;
-}
 export function setLastLeftClick(v: { timeMs: number; cx: number; cy: number } | null) {
 	lastLeftClick = v;
-}
-export function setLinuxCursorScreenPoint(v: { x: number; y: number; updatedAt: number } | null) {
-	linuxCursorScreenPoint = v;
 }
 export function setSelectedWindowBounds(v: WindowBounds | null) {
 	selectedWindowBounds = v;

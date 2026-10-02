@@ -1,8 +1,8 @@
 /* biome-ignore-all lint/correctness/useExhaustiveDependencies: setters returned by the editor's domain-state hooks are stable React dispatchers. */
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { useShortcuts } from "@/contexts/ShortcutsContext";
 import { getAspectRatioValue } from "@/utils/aspectRatioUtils";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadEditorPreferences } from "./editorPreferences";
 import { useEditorExportController } from "./export/useEditorExportController";
 import { useExportDimensions } from "./export/useExportDimensions";
@@ -19,7 +19,6 @@ import { useAppearanceState } from "./state/useAppearanceState";
 import { useEditorUiState } from "./state/useEditorUiState";
 import { useProjectState } from "./state/useProjectState";
 import { useTimelineState } from "./state/useTimelineState";
-import { useNvidiaCudaExportOptIn } from "./useNvidiaCudaExportOptIn";
 
 export default function VideoEditor() {
 	const { t } = useI18n();
@@ -120,25 +119,10 @@ export default function VideoEditor() {
 		autoCaptions,
 		timeline.clipRegions,
 	);
-	const {
-		includeCaptionSidecar,
-		mp4FrameRate,
-		gifSizePreset,
-		captionSidecarCues,
-		setExportPipelineModel,
-	} = exportSettings;
+	const { includeCaptionSidecar, mp4FrameRate, gifSizePreset, captionSidecarCues } =
+		exportSettings;
 	const exportSession = useExportSession();
 	const { exporterRef, exportRunIdRef, pendingExportSaveRef } = exportSession;
-	const enableModernExportPipeline = useCallback(() => {
-		setExportPipelineModel("modern");
-	}, []);
-	const {
-		nvidiaCudaExportAvailable,
-		experimentalNvidiaCudaExport,
-		setExperimentalNvidiaCudaExport,
-	} = useNvidiaCudaExportOptIn({
-		onEnabled: enableModernExportPipeline,
-	});
 	const hasCaptionsForSidecar = autoCaptionSettings.enabled && autoCaptions.length > 0;
 	const captionSidecarPayload =
 		hasCaptionsForSidecar && captionSidecarCues.length > 0 && includeCaptionSidecar
@@ -345,8 +329,6 @@ export default function VideoEditor() {
 		cursorTelemetrySourcePath,
 		hasCaptionsForSidecar,
 		captionSidecarPayload,
-		experimentalNvidiaCudaExport,
-		nvidiaCudaExportAvailable,
 		remountPreview,
 	});
 	const previewAspectRatioValue = getAspectRatioValue(
@@ -402,9 +384,6 @@ export default function VideoEditor() {
 			settingsPanelProps={settingsPanelProps}
 			headerLeftControlsPaddingClass={headerLeftControlsPaddingClass}
 			hasCaptionsForSidecar={hasCaptionsForSidecar}
-			nvidiaCudaExportAvailable={nvidiaCudaExportAvailable}
-			experimentalNvidiaCudaExport={experimentalNvidiaCudaExport}
-			setExperimentalNvidiaCudaExport={setExperimentalNvidiaCudaExport}
 			effectiveShowCursor={effectiveShowCursor}
 			previewAspectRatioValue={previewAspectRatioValue}
 		/>

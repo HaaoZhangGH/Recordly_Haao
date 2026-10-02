@@ -1,9 +1,9 @@
+import { app } from "electron";
 import { execFile } from "node:child_process";
 import { existsSync, constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { app } from "electron";
 import { nativeHelperMigrationPromise, setNativeHelperMigrationPromise } from "../state";
 
 const execFileAsync = promisify(execFile);
@@ -26,20 +26,10 @@ export function getNativeCaptureHelperSourcePath(): string {
 	return resolveUnpackedAppPath("electron", "native", "ScreenCaptureKitRecorder.swift");
 }
 
-export function getNativeArchTag(platform: NodeJS.Platform = process.platform): string {
-	if (platform === "darwin") {
-		return process.arch === "arm64" ? "darwin-arm64" : "darwin-x64";
+export function getNativeArchTag(_platform: NodeJS.Platform = "darwin"): string {
+	{
+		return "darwin-arm64";
 	}
-
-	if (platform === "win32") {
-		return process.arch === "arm64" ? "win32-arm64" : "win32-x64";
-	}
-
-	if (platform === "linux") {
-		return process.arch === "arm64" ? "linux-arm64" : "linux-x64";
-	}
-
-	return `${platform}-${process.arch}`;
 }
 
 export function getPrebundledNativeHelperPath(
@@ -49,42 +39,8 @@ export function getPrebundledNativeHelperPath(
 	return resolveUnpackedAppPath("electron", "native", "bin", archTag, binaryName);
 }
 
-export function resolvePreferredWindowsNativeHelperPath(
-	helperDirectory: string,
-	binaryName: string,
-): string {
-	const buildOutputPath = resolveUnpackedAppPath(
-		"electron",
-		"native",
-		helperDirectory,
-		"build",
-		"Release",
-		binaryName,
-	);
-	const prebundledPath = getPrebundledNativeHelperPath(binaryName, getNativeArchTag("win32"));
-
-	if (app.isPackaged && existsSync(prebundledPath)) {
-		return prebundledPath;
-	}
-
-	// Source checkouts should run the helper staged in the branch instead of a
-	// stale local CMake build left over from an earlier test run.
-	if (existsSync(prebundledPath)) {
-		return prebundledPath;
-	}
-
-	if (existsSync(buildOutputPath)) {
-		return buildOutputPath;
-	}
-
-	return buildOutputPath;
-}
-
 export function getBundledWhisperExecutableCandidates(): string[] {
-	const binaryNames =
-		process.platform === "win32"
-			? ["whisper-cli.exe", "whisper-cpp.exe", "whisper.exe", "main.exe"]
-			: ["whisper-cli", "whisper-cpp", "whisper", "main"];
+	const binaryNames = ["whisper-cli", "whisper-cpp", "whisper", "main"];
 
 	return binaryNames.map((binaryName) => getPrebundledNativeHelperPath(binaryName));
 }
@@ -115,14 +71,6 @@ export function getNativeWindowListSourcePath(): string {
 
 export function getNativeWindowListBinaryPath(): string {
 	return path.join(app.getPath("userData"), "native-tools", "recordly-window-list");
-}
-
-export function getWindowsCaptureExePath(): string {
-	return resolvePreferredWindowsNativeHelperPath("wgc-capture", "wgc-capture.exe");
-}
-
-export function getCursorMonitorExePath(): string {
-	return resolvePreferredWindowsNativeHelperPath("cursor-monitor", "cursor-monitor.exe");
 }
 
 async function migrateLegacyNativeHelperBinaries(): Promise<void> {

@@ -54,7 +54,17 @@
 			"upToDateTitle": "Recordly {{version}} is up-to-date.",
 			"availableTitle": "Recordly {{version}} is beschikbaar.",
 			"availableGenericTitle": "Er is een update beschikbaar."
-		}
+		},
+		"pickWindow": "Record a window…",
+		"pickScreen": "Record a screen…",
+		"pickerHint": "Confirm a window or screen to start recording with your countdown setting.",
+		"pickerFailed": "System selection is unavailable. Try again or choose from the list below.",
+		"chooseFromList": "Choose from list…",
+		"chooseTarget": "Window / Screen",
+		"permission_screen": "Screen recording access is not available. Enable Recordly in System Settings, then try recording again.",
+		"permission_accessibility": "Cursor tracking access is not available. If Recordly is already enabled, remove the old entry and add Recordly from Applications again. Then retry recording.",
+		"permission_unavailable": "Unable to check recording permissions. Please try again.",
+		"openPermissionSettings": "Open permission settings"
 	},
 	"sourceSelector": {
 		"loadingSources": "Bronnen laden...",

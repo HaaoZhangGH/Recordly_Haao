@@ -4,7 +4,6 @@ import {
 	buildInteractionZoomSuggestions,
 	CLICK_CLUSTER_MERGE_GAP_MS,
 	CLICK_CLUSTER_PAD_MS,
-	shouldAutoApplyFreshRecordingZoomsForSource,
 } from "./zoomSuggestionUtils";
 
 function makeClick(
@@ -26,26 +25,6 @@ function withMoves(clicks: CursorTelemetryPoint[], totalMs: number): CursorTelem
 }
 
 const TOTAL_MS = 30_000;
-
-describe("shouldAutoApplyFreshRecordingZoomsForSource", () => {
-	it("allows automatic fresh-recording zooms for landscape captures", () => {
-		expect(shouldAutoApplyFreshRecordingZoomsForSource(1920, 1080)).toBe(true);
-		expect(shouldAutoApplyFreshRecordingZoomsForSource(1280, 960)).toBe(true);
-	});
-
-	it("blocks automatic fresh-recording zooms for narrow or near-square captures", () => {
-		expect(shouldAutoApplyFreshRecordingZoomsForSource(960, 1020)).toBe(false);
-		expect(shouldAutoApplyFreshRecordingZoomsForSource(1080, 1080)).toBe(false);
-	});
-
-	it("allows narrow Windows window captures when click telemetry is available", () => {
-		expect(shouldAutoApplyFreshRecordingZoomsForSource(936, 1028, "win32")).toBe(true);
-	});
-
-	it("does not block when source dimensions are not available yet", () => {
-		expect(shouldAutoApplyFreshRecordingZoomsForSource()).toBe(true);
-	});
-});
 
 describe("buildInteractionZoomSuggestions (click-cluster logic)", () => {
 	it("creates one zoom track for a single isolated click with 500ms padding", () => {

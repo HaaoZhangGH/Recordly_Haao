@@ -11,72 +11,6 @@ type NativeVideoAudioMuxMetrics = {
 	tempEditedAudioBytes?: number;
 	muxedVideoBytes?: number;
 };
-type WindowsGpuExportSummary = {
-	success?: boolean;
-	width?: number;
-	height?: number;
-	fps?: number;
-	seconds?: number;
-	mediaMs?: number;
-	frames?: number;
-	cursorOverlay?: boolean;
-	zoomOverlay?: boolean;
-	adapterVendorId?: number;
-	adapterDeviceId?: number;
-	adapterDedicatedVideoMemoryMB?: number;
-	initializeMs?: number;
-	initCoInitializeMs?: number;
-	initMfStartupMs?: number;
-	initD3DDeviceMs?: number;
-	initSourceReaderMs?: number;
-	initWebcamReaderMs?: number;
-	initVideoProcessorMs?: number;
-	initTexturesMs?: number;
-	initShaderPipelineMs?: number;
-	initSinkWriterMs?: number;
-	totalMs?: number;
-	readMs?: number;
-	clearMs?: number;
-	videoProcessMs?: number;
-	writeSampleMs?: number;
-	finalizeMs?: number;
-	realtimeMultiplier?: number;
-};
-type NativeStaticLayoutChunkMetric = {
-	index: number;
-	startSec: number;
-	durationSec: number;
-	backend:
-		| "cuda-overlay"
-		| "cuda-scale-cpu-pad"
-		| "cuda-static-composite"
-		| "nvidia-cuda-compositor"
-		| "windows-d3d11-compositor";
-	elapsedMs: number;
-	outputBytes: number;
-	fallbackReason?: string;
-	windowsGpuSummary?: WindowsGpuExportSummary;
-};
-type NativeStaticLayoutMetrics = NativeVideoAudioMuxMetrics & {
-	chunkCount: number;
-	chunkDurationSec: number;
-	chunkExecMs: number;
-	concatExecMs?: number;
-	staticAssetExecMs?: number;
-	fallbackChunkCount: number;
-	videoOnlyBytes?: number;
-	chunks: NativeStaticLayoutChunkMetric[];
-};
-type NativeStaticLayoutProgress = {
-	sessionId?: string;
-	backend?: NativeStaticLayoutChunkMetric["backend"];
-	stage?: "preparing" | "finalizing";
-	elapsedMs?: number;
-	averageFps?: number;
-	currentFrame: number;
-	totalFrames: number;
-	percentage: number;
-};
 type NativeVideoMetadataProbe = {
 	width: number;
 	height: number;
@@ -89,18 +23,6 @@ type NativeVideoMetadataProbe = {
 	hasAudio: boolean;
 	audioCodec?: string;
 	audioSampleRate?: number;
-};
-type NativeExportCapabilities = {
-	platform: NodeJS.Platform;
-	nvidiaCuda: {
-		available: boolean;
-		skipReason: string | null;
-		hasNvidiaGpu: boolean | null;
-		hasWrapper: boolean;
-		explicitEnabled: boolean;
-		explicitDisabled: boolean;
-		userOptInRequired: boolean;
-	};
 };
 type ExportHardwareInfo = {
 	platform: NodeJS.Platform;
@@ -240,114 +162,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			error?: string;
 		}>;
 	},
-	getNativeExportCapabilities: () => {
-		return ipcRenderer.invoke("get-native-export-capabilities") as Promise<{
-			success: boolean;
-			capabilities?: NativeExportCapabilities;
-			error?: string;
-		}>;
-	},
 	getExportHardwareInfo: () => {
 		return ipcRenderer.invoke("get-export-hardware-info") as Promise<{
 			success: boolean;
 			hardware?: ExportHardwareInfo;
 			error?: string;
 		}>;
-	},
-	nativeStaticLayoutExport: (options: {
-		sessionId?: string;
-		inputPath: string;
-		width: number;
-		height: number;
-		frameRate: number;
-		bitrate: number;
-		encodingMode: "fast" | "balanced" | "quality";
-		durationSec: number;
-		contentWidth: number;
-		contentHeight: number;
-		offsetX: number;
-		offsetY: number;
-		sourceCropX?: number;
-		sourceCropY?: number;
-		sourceCropWidth?: number;
-		sourceCropHeight?: number;
-		backgroundColor: string;
-		backgroundImagePath?: string | null;
-		backgroundBlurPx?: number;
-		borderRadius?: number;
-		shadowIntensity?: number;
-		webcamInputPath?: string | null;
-		webcamLeft?: number;
-		webcamTop?: number;
-		webcamSize?: number;
-		webcamRadius?: number;
-		webcamShadowIntensity?: number;
-		webcamMirror?: boolean;
-		webcamTimeOffsetMs?: number;
-		cursorTelemetry?: Array<{
-			timeMs: number;
-			cx: number;
-			cy: number;
-			cursorTypeIndex?: number;
-			bounceScale?: number;
-			visible?: boolean;
-		}>;
-		cursorSize?: number;
-		cursorAtlasPngDataUrl?: string | null;
-		cursorAtlasEntries?: Array<{
-			index: number;
-			x: number;
-			y: number;
-			width: number;
-			height: number;
-			anchorX: number;
-			anchorY: number;
-			aspectRatio: number;
-		}>;
-		zoomTelemetry?: Array<{ timeMs: number; scale: number; x: number; y: number }>;
-		timelineSegments?: Array<{
-			sourceStartMs: number;
-			sourceEndMs: number;
-			outputStartMs: number;
-			outputEndMs: number;
-			speed: number;
-		}>;
-		chunkDurationSec?: number;
-		experimentalWindowsGpuCompositor?: boolean;
-		experimentalNvidiaCudaExport?: boolean;
-		audioOptions?: {
-			audioMode?: "none" | "copy-source" | "trim-source" | "edited-track";
-			audioSourcePath?: string | null;
-			audioSourceCodec?: string | null;
-			audioSourceSampleRate?: number;
-			outputDurationSec?: number;
-			trimSegments?: Array<{ startMs: number; endMs: number }>;
-			editedTrackStrategy?: "filtergraph-fast-path" | "offline-render-fallback";
-			editedTrackSegments?: Array<{ startMs: number; endMs: number; speed: number }>;
-			editedAudioData?: ArrayBuffer;
-			editedAudioMimeType?: string | null;
-		};
-	}) => {
-		return ipcRenderer.invoke("native-static-layout-export", options) as Promise<{
-			success: boolean;
-			tempPath?: string;
-			encoderName?: string;
-			error?: string;
-			metrics?: NativeStaticLayoutMetrics;
-		}>;
-	},
-	nativeStaticLayoutExportCancel: (sessionId: string) => {
-		return ipcRenderer.invoke("native-static-layout-export-cancel", sessionId) as Promise<{
-			success: boolean;
-		}>;
-	},
-	onNativeStaticLayoutExportProgress: (
-		callback: (progress: NativeStaticLayoutProgress) => void,
-	) => {
-		const listener = (_event: Electron.IpcRendererEvent, payload: NativeStaticLayoutProgress) =>
-			callback(payload);
-		ipcRenderer.on("native-static-layout-export-progress", listener);
-		return () => ipcRenderer.removeListener("native-static-layout-export-progress", listener);
 	},
 	nativeVideoExportStart: (options: {
 		width: number;
@@ -526,6 +346,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	openSourceSelector: () => {
 		return ipcRenderer.invoke("open-source-selector");
 	},
+	pickNativeSource: (mode: "screen" | "window") => ipcRenderer.invoke("pick-native-source", mode),
 	selectSource: (source: ProcessedDesktopSource) => {
 		return ipcRenderer.invoke("select-source", source);
 	},
@@ -574,12 +395,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 	resumeCursorCapture: (resumedAtMs?: number) => {
 		return ipcRenderer.invoke("resume-cursor-capture", resumedAtMs);
-	},
-	startFfmpegRecording: (source: ProcessedDesktopSource) => {
-		return ipcRenderer.invoke("start-ffmpeg-recording", source);
-	},
-	stopFfmpegRecording: () => {
-		return ipcRenderer.invoke("stop-ffmpeg-recording");
 	},
 	storeRecordedVideo: (videoData: ArrayBuffer, fileName: string) => {
 		return ipcRenderer.invoke("store-recorded-video", videoData, fileName);
@@ -991,9 +806,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		ipcRenderer.on("window-fullscreen-changed", listener);
 		return () => ipcRenderer.removeListener("window-fullscreen-changed", listener);
 	},
-	getLinuxWindowSystem: () => {
-		return ipcRenderer.invoke("get-linux-window-system");
-	},
 	ackAuthCallbackUrl: (url: string) => ipcRenderer.invoke("auth:ack-callback", url),
 	getPendingAuthCallbackUrl: () => ipcRenderer.invoke("auth:get-pending-callback"),
 	onAuthCallbackUrl: (callback: (url: string) => void) => {
@@ -1071,10 +883,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		ipcRenderer.on("request-save-before-close", listener);
 		return () => ipcRenderer.removeListener("request-save-before-close", listener);
 	},
-	isNativeWindowsCaptureAvailable: () =>
-		ipcRenderer.invoke("is-native-windows-capture-available"),
-	muxNativeWindowsRecording: (expectedDurationMs?: number) =>
-		ipcRenderer.invoke("mux-native-windows-recording", expectedDurationMs),
 	hideOsCursor: () => ipcRenderer.invoke("hide-cursor"),
 	getAppVersion: () => ipcRenderer.invoke("app:getVersion"),
 	getAnnouncements: () => ipcRenderer.invoke("announcements:get"),
